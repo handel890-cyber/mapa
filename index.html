@@ -3,20 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VISOR TOROMOCHO - GPS</title>
+    <title>VISOR TOROMOCHO - PLANOS VOLADURA Y SENSORES</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
-        /* Panel de Control */
+        /* --- BOTÓN DE MENÚ (NUEVO) --- */
+        #menu-toggle {
+            position: absolute; top: 10px; left: 10px;
+            z-index: 1100; /* Por encima de todo */
+            background: #2c3e50; color: white;
+            border: none; border-radius: 4px;
+            width: 40px; height: 40px;
+            font-size: 1.5em; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* --- PANEL DESLIZABLE --- */
         #panel { 
-            position: absolute; top: 10px; left: 10px; 
+            position: absolute; top: 60px; left: 10px; /* Bajamos un poco para dejar sitio al botón menú */
             width: 200px; background: rgba(33, 47, 61, 0.95); 
             color: white; padding: 10px; border-radius: 8px; 
             z-index: 1000; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            max-height: 90vh; overflow-y: auto;
+            max-height: 80vh; overflow-y: auto;
+            
+            /* Animación de escondido */
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(0); /* Estado normal: Visible */
+        }
+
+        /* Clase para cuando está escondido */
+        #panel.escondido {
+            transform: translateX(-250%); /* Se mueve a la izquierda fuera de la pantalla */
         }
 
         h3 { margin: 0 0 5px 0; font-size: 0.85em; color: #3498db; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
@@ -32,7 +52,6 @@
         
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 2px black); }
         
-        /* Ajuste de capas para móviles */
         .leaflet-control-layers {
             border-radius: 8px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
@@ -42,21 +61,24 @@
 </head>
 <body>
 
+<button id="menu-toggle" onclick="togglePanel()">☰</button>
+
 <div id="panel">
+    
     <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR MI GPS</button>
 
     <h4>💥 Voladura</h4>
     <label>Norte (Y):</label>
-    <input type="number" id="norte" value="8716250">
+    <input type="number" id="norte" value="">
     <label>Este (X):</label>
-    <input type="number" id="este" value="375250">
+    <input type="number" id="este" value="">
     <label>Radio (m):</label>
-    <input type="number" id="radio" value="500">
+    <input type="number" id="radio" value="">
     <button class="btn-graficar" onclick="procesarVoladura()">GRAFICAR ZONA ROJA</button>
     <button class="btn-limpiar" onclick="limpiarMapa()">LIMPIAR MAPA</button>
 
     <div style="margin-top:15px; font-size: 0.7em; color: #95a5a6; text-align: center;">
-        <i>Si no ves tu ubicación, revisa que el candado 🔒 del navegador tenga permisos activados.</i>
+        <i>Toca ☰ para ocultar este menú y ver el mapa completo.</i>
     </div>
 </div>
 
@@ -66,27 +88,32 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // 1. DEFINICIÓN DE MAPAS
+    // --- 1. FUNCIÓN PARA ESCONDER EL PANEL ---
+    function togglePanel() {
+        var panel = document.getElementById('panel');
+        // Agrega o quita la clase "escondido"
+        panel.classList.toggle('escondido');
+    }
+
+    // --- 2. CONFIGURACIÓN DEL MAPA ---
     var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
     var mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
     var mapaTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'OTM' });
 
-    // 2. CONFIGURACIÓN DEL MAPA
     var map = L.map('map', {
         zoomControl: false,
         layers: [mapaSatelite] 
     }).setView([-11.619, -76.08], 13);
 
     var capaVoladuras = L.layerGroup().addTo(map);
-    var capaGPS = L.layerGroup().addTo(map); // Aseguramos que esté añadido
+    var capaGPS = L.layerGroup().addTo(map);
     var capaTormentas = L.layerGroup().addTo(map);
 
-    // 3. CONTROL DE CAPAS
     var baseMaps = { "🌎 Satélite": mapaSatelite, "🗺️ Terreno": mapaCalles, "⛰️ Topográfico": mapaTopo };
-    var overlayMaps = { "⚡ Sensores": capaTormentas, "💥 Voladura": capaVoladuras, "📍 Mi Ubicación": capaGPS };
+    var overlayMaps = { "⚡ Sensores": capaTormentas, "💥 Voladura": capaVoladuras };
     L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
-    // 4. ICONO CARRO
+    // --- 3. ICONO CARRO VERDE ---
     var truckIcon = L.divIcon({
         className: 'car-container',
         html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg">
@@ -96,7 +123,7 @@
         iconAnchor: [15, 15]
     });
 
-    // 5. SENSORES
+    // --- 4. SENSORES AZULES LIVIANOS ---
     const sensores = [
         { nombre: "Mina", lat: -11.61543, lon: -76.14331 },
         { nombre: "Carhuacoto", lat: -11.58529, lon: -76.06169 },
@@ -115,60 +142,37 @@
     }
     dibujarSensores();
 
-    // 6. LÓGICA DE GPS MEJORADA
+    // --- 5. GPS INTELIGENTE ---
     var marcadorVehiculo = null;
 
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
-        
-        if (!navigator.geolocation) {
-            alert("❌ Tu navegador no soporta GPS.");
-            return;
-        }
+        if (!navigator.geolocation) { alert("❌ Sin soporte GPS."); return; }
 
-        // Cambiamos el texto del botón para saber que está pensando
-        btn.innerHTML = "🔄 Buscando satélites...";
-        btn.style.backgroundColor = "#e67e22"; // Naranja
+        btn.innerHTML = "🔄 Buscando...";
+        btn.style.backgroundColor = "#e67e22";
 
         navigator.geolocation.watchPosition(
             (pos) => {
-                // ÉXITO: Encontramos ubicación
                 var latLng = [pos.coords.latitude, pos.coords.longitude];
-                
-                // Actualizamos botón a VERDE
                 btn.innerHTML = "✅ GPS ACTIVO";
                 btn.style.backgroundColor = "#27ae60";
 
                 if (!marcadorVehiculo) {
                     marcadorVehiculo = L.marker(latLng, { icon: truckIcon }).addTo(capaGPS);
-                    map.flyTo(latLng, 18); // Zoom fuerte al carro
-                    // Aseguramos que la capa esté visible
-                    if (!map.hasLayer(capaGPS)) {
-                        map.addLayer(capaGPS);
-                    }
+                    map.flyTo(latLng, 18);
+                    if (!map.hasLayer(capaGPS)) { map.addLayer(capaGPS); }
                 } else {
                     marcadorVehiculo.setLatLng(latLng);
                 }
             },
             (err) => {
-                // ERROR: Algo falló
                 console.warn(err);
-                btn.innerHTML = "⚠️ REINTENTAR GPS";
-                btn.style.backgroundColor = "#c0392b"; // Rojo
-                
-                if(err.code === 1) {
-                    alert("⛔ PERMISO DENEGADO: Ve a la configuración de tu navegador (el candado 🔒 junto a la URL) y permite el acceso a la Ubicación.");
-                } else if (err.code === 2) {
-                    alert("📡 SIN SEÑAL: No se puede obtener la posición. Sal al aire libre.");
-                } else if (err.code === 3) {
-                    alert("⏱️ TIMEOUT: Se agotó el tiempo de espera.");
-                }
+                btn.innerHTML = "⚠️ REINTENTAR";
+                btn.style.backgroundColor = "#c0392b";
+                if(err.code === 1) alert("⛔ ACTIVA EL PERMISO DE UBICACIÓN EN EL NAVEGADOR.");
             },
-            { 
-                enableHighAccuracy: true, 
-                timeout: 10000, 
-                maximumAge: 0 
-            }
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     }
 
