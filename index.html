@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VISOR TOROMOCHO - RADIO VOLADURA Y TORMENTAS ELECTRICAS</title>
+    <title>VISOR TOROMOCHO - RADIO DE VOLADURA Y SENSOR DE TORMENTAS</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
@@ -41,33 +41,34 @@
         .btn-graficar { background: #e67e22; color: white; }
         .btn-limpiar { background: #c0392b; color: white; }
 
-        /* CRÉDITOS DEL DESARROLLADOR (TU FIRMA) */
         .footer-dev {
-            margin-top: 15px;
-            padding-top: 10px;
-            border-top: 1px solid #555;
-            text-align: center;
-            font-size: 0.6em;
-            color: #95a5a6;
-            letter-spacing: 1px;
+            margin-top: 15px; padding-top: 10px; border-top: 1px solid #555;
+            text-align: center; font-size: 0.6em; color: #95a5a6; letter-spacing: 1px;
         }
         .footer-dev b { color: #3498db; }
 
-        /* CAJA DE INFO DE DISTANCIA */
-        #info-box {
-            margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); 
-            border-radius: 5px; font-size: 0.85em; text-align: center; display: none;
-            line-height: 1.4;
+        /* CAJAS DE INFORMACIÓN (ALERTAS) */
+        .alert-box {
+            margin-top: 8px; padding: 10px; border-radius: 5px; font-size: 0.8em; 
+            text-align: center; display: none; line-height: 1.3;
         }
-        .seguro { color: #2ecc71; border: 2px solid #2ecc71; background: rgba(46, 204, 113, 0.1); }
-        .peligro { color: #e74c3c; border: 2px solid #e74c3c; background: rgba(231, 76, 60, 0.1); animation: parpadeo 1s infinite; }
+
+        /* Estilo Voladura (Rojo/Verde) */
+        .seguro { color: #2ecc71; border: 1px solid #2ecc71; background: rgba(46, 204, 113, 0.1); }
+        .peligro { color: #e74c3c; border: 2px solid #e74c3c; background: rgba(231, 76, 60, 0.2); animation: parpadeo 1s infinite; }
+
+        /* Estilo Tormenta (Azul Eléctrico) */
+        .storm-active {
+            color: #f1c40f; /* Amarillo rayo */
+            border: 2px solid #3498db; /* Borde Azul */
+            background: rgba(52, 152, 219, 0.3); /* Fondo Azul transparente */
+            font-weight: bold;
+            text-shadow: 0px 0px 5px black;
+        }
 
         @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
 
-        /* VISOR UTM */
-        #utm-display {
-            font-size: 0.7em; color: #f39c12; margin-bottom: 10px; text-align: center; font-family: monospace;
-        }
+        #utm-display { font-size: 0.7em; color: #f39c12; margin-bottom: 10px; text-align: center; font-family: monospace; }
         #zona-counter { text-align: center; font-size: 0.7em; color: #bdc3c7; margin-bottom: 5px; }
 
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 2px black); }
@@ -80,29 +81,26 @@
 
 <div id="panel">
     <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR GPS</button>
-    
     <div id="utm-display">Esperando GPS...</div>
+
+    <div id="storm-box" class="alert-box"></div>
 
     <h4>💥 Agregar Voladura</h4>
     <label>Norte (Y):</label>
     <input type="number" id="norte" value="" inputmode="decimal">
-    
     <label>Este (X):</label>
     <input type="number" id="este" value="" inputmode="decimal">
-    
     <label>Radio (m):</label>
     <input type="number" id="radio" value="700" inputmode="decimal">
 
     <button class="btn-graficar" onclick="agregarZona()">➕ AGREGAR ZONA</button>
     <div id="zona-counter">Zonas activas: 0</div>
     
-    <div id="info-box"></div>
+    <div id="blasting-box" class="alert-box"></div>
 
     <button class="btn-limpiar" onclick="limpiarMapa()">🗑️ BORRAR TODO</button>
 
-    <div class="footer-dev">
-        Dev: <b>Johann C.P.</b>
-    </div>
+    <div class="footer-dev">Dev: <b>Johann CP</b></div>
 </div>
 
 <div id="map"></div>
@@ -113,6 +111,7 @@
 <script>
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
 
+    // 1. CONFIGURACIÓN
     proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
 
     var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
@@ -130,17 +129,20 @@
     var overlayMaps = { "⚡ Sensores": capaTormentas, "💥 Zonas Voladura": capaVoladuras };
     L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
+    // 2. SENSORES TORMENTA (5.2km Radio)
+    const RADIO_TORMENTA = 5200; // metros
     const sensores = [
-        { nombre: "Mina", lat: -11.61543, lon: -76.14331 },
-        { nombre: "Carhuacoto", lat: -11.58529, lon: -76.06169 },
-        { nombre: "Tunshuruco", lat: -11.67360, lon: -76.13777 },
-        { nombre: "Kingsmill", lat: -11.63342, lon: -76.05691 }
+        { nombre: "MINA", lat: -11.61543, lon: -76.14331 },
+        { nombre: "CARHUACOTO", lat: -11.58529, lon: -76.06169 },
+        { nombre: "TUNSHURUCO", lat: -11.67360, lon: -76.13777 },
+        { nombre: "KINGSMILL", lat: -11.63342, lon: -76.05691 }
     ];
     sensores.forEach(s => {
         L.marker([s.lat, s.lon], {icon: L.divIcon({html:'⚡', className:''})}).addTo(capaTormentas);
-        L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
+        L.circle([s.lat, s.lon], {radius: RADIO_TORMENTA, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
     });
 
+    // 3. GPS & TRACKING
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
     var miPosicionLatLon = null;
@@ -156,9 +158,10 @@
                 var lon = pos.coords.longitude;
                 miPosicionLatLon = L.latLng(lat, lon);
 
+                // UTM DISPLAY
                 try {
                     var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
-                    document.getElementById("utm-display").innerHTML = `📍 UTM ACTUAL:<br>N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
+                    document.getElementById("utm-display").innerHTML = `📍 UTM: N ${utm[1].toFixed(0)} | E ${utm[0].toFixed(0)}`;
                 } catch(e) {}
 
                 btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
@@ -168,13 +171,41 @@
                     map.flyTo([lat, lon], 16); 
                 } else { marcadorVehiculo.setLatLng([lat, lon]); }
 
-                calcularSeguridad();
+                // --- CÁLCULOS DE SEGURIDAD ---
+                verificarTormentas(); // NUEVO: Revisa sensores
+                calcularVoladuras();  // Revisa voladuras
             },
             (err) => { btn.innerHTML = "⚠️ ERROR GPS"; btn.style.backgroundColor = "#c0392b"; }, 
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     }
 
+    // --- 4. LÓGICA DE TORMENTAS (NUEVO) ---
+    function verificarTormentas() {
+        if (!miPosicionLatLon) return;
+        var box = document.getElementById("storm-box");
+        var sensoresDetectados = [];
+
+        sensores.forEach(sensor => {
+            // Calculamos distancia al sensor
+            var dist = map.distance(miPosicionLatLon, [sensor.lat, sensor.lon]);
+            // Si es menor al radio (5200m), estamos dentro
+            if (dist <= RADIO_TORMENTA) {
+                sensoresDetectados.push(sensor.nombre);
+            }
+        });
+
+        if (sensoresDetectados.length > 0) {
+            box.style.display = "block";
+            box.className = "alert-box storm-active";
+            // .join(" y ") crea el texto "MINA y CARHUACOTO" si hay más de uno
+            box.innerHTML = `⚡ Estás en cobertura de:<br>${sensoresDetectados.join(" y ")}`;
+        } else {
+            box.style.display = "none";
+        }
+    }
+
+    // --- 5. LÓGICA DE VOLADURAS ---
     var zonasActivas = [];
 
     function agregarZona() {
@@ -196,15 +227,15 @@
 
             document.getElementById("zona-counter").innerText = `Zonas activas: ${zonasActivas.length}`;
             map.flyTo(centro, 14);
-            calcularSeguridad();
+            calcularVoladuras();
 
         } catch (err) { alert("Error Coordenadas"); }
     }
 
-    function calcularSeguridad() {
+    function calcularVoladuras() {
         if (!miPosicionLatLon || zonasActivas.length === 0) return;
 
-        var infoBox = document.getElementById("info-box");
+        var box = document.getElementById("blasting-box");
         lineaDistancia.clearLayers();
 
         var zonaMasCritica = null;
@@ -213,7 +244,6 @@
         zonasActivas.forEach(zona => {
             var distCentro = map.distance(miPosicionLatLon, zona.centro);
             var distBorde = distCentro - zona.radio;
-
             if (distBorde < minDistanciaBorde) {
                 minDistanciaBorde = distBorde;
                 zonaMasCritica = zona;
@@ -222,14 +252,14 @@
 
         if (minDistanciaBorde <= 0) {
             var metrosSalir = Math.abs(minDistanciaBorde);
-            infoBox.style.display = "block";
-            infoBox.className = "peligro";
-            infoBox.innerHTML = `⚠️ <b>¡PELIGRO!</b><br>Estás DENTRO de una zona roja.<br>Sal a <b>${metrosSalir.toFixed(0)}m</b> ya.`;
+            box.style.display = "block";
+            box.className = "alert-box peligro";
+            box.innerHTML = `⚠️ <b>¡PELIGRO!</b><br>DENTRO de zona roja.<br>Sal a <b>${metrosSalir.toFixed(0)}m</b>.`;
             L.polyline([miPosicionLatLon, zonaMasCritica.centro], {color: 'red', weight: 4}).addTo(lineaDistancia);
         } else {
-            infoBox.style.display = "block";
-            infoBox.className = "seguro";
-            infoBox.innerHTML = `✅ <b>ZONA SEGURA</b><br>Zona más cercana a: <b>${minDistanciaBorde.toFixed(0)}m</b>.`;
+            box.style.display = "block";
+            box.className = "alert-box seguro";
+            box.innerHTML = `✅ <b>ZONA SEGURA</b><br>Voladura más cercana: <b>${minDistanciaBorde.toFixed(0)}m</b>.`;
             L.polyline([miPosicionLatLon, zonaMasCritica.centro], {color: 'white', dashArray: '5, 10', weight: 2}).addTo(lineaDistancia);
         }
     }
@@ -237,7 +267,7 @@
     function limpiarMapa() { 
         capaVoladuras.clearLayers(); 
         lineaDistancia.clearLayers();
-        document.getElementById("info-box").style.display = "none";
+        document.getElementById("blasting-box").style.display = "none";
         zonasActivas = [];
         document.getElementById("zona-counter").innerText = `Zonas activas: 0`;
     }
