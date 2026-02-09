@@ -3,60 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VISOR TOROMOCHO - PLANOS VOLADURA Y SENSORES</title>
+    <title>VISOR TOROMOCHO - MULTI ZONA</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
-        /* --- BOTÓN DE MENÚ (NUEVO) --- */
+        /* BOTÓN MENÚ */
         #menu-toggle {
-            position: absolute; top: 10px; left: 10px;
-            z-index: 1100; /* Por encima de todo */
-            background: #2c3e50; color: white;
-            border: none; border-radius: 4px;
-            width: 40px; height: 40px;
-            font-size: 1.5em; cursor: pointer;
+            position: absolute; top: 10px; left: 10px; z-index: 1100;
+            background: #2c3e50; color: white; border: none; border-radius: 4px;
+            width: 40px; height: 40px; font-size: 1.5em; cursor: pointer;
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
-        /* --- PANEL DESLIZABLE --- */
+        /* PANEL */
         #panel { 
-            position: absolute; top: 60px; left: 10px; /* Bajamos un poco para dejar sitio al botón menú */
-            width: 200px; background: rgba(33, 47, 61, 0.95); 
-            color: white; padding: 10px; border-radius: 8px; 
-            z-index: 1000; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            max-height: 80vh; overflow-y: auto;
-            
-            /* Animación de escondido */
-            transition: transform 0.3s ease-in-out;
-            transform: translateX(0); /* Estado normal: Visible */
+            position: absolute; top: 60px; left: 10px; width: 220px; 
+            background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
+            border-radius: 8px; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            max-height: 80vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
+            transform: translateX(0);
         }
+        #panel.escondido { transform: translateX(-300%); }
 
-        /* Clase para cuando está escondido */
-        #panel.escondido {
-            transform: translateX(-250%); /* Se mueve a la izquierda fuera de la pantalla */
-        }
-
-        h3 { margin: 0 0 5px 0; font-size: 0.85em; color: #3498db; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
-        h4 { margin: 10px 0 5px 0; font-size: 0.75em; color: #2ecc71; text-transform: uppercase; }
-        
+        h4 { margin: 10px 0 5px 0; font-size: 0.75em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
         label { font-size: 0.65em; color: #bdc3c7; display: block; margin-top: 3px; }
-        input { width: 95%; padding: 4px; margin: 2px 0; border-radius: 4px; border: none; background: #34495e; color: white; font-size: 0.8em; }
         
-        button { width: 100%; padding: 8px; margin: 5px 0; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
-        .btn-gps { background: #2980b9; color: white; }
-        .btn-graficar { background: #c0392b; color: white; }
-        .btn-limpiar { background: #7f8c8d; color: white; }
-        
-        .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 2px black); }
-        
-        .leaflet-control-layers {
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            padding: 5px;
+        input { 
+            width: 95%; padding: 6px; margin: 2px 0; border-radius: 4px; border: 1px solid #555; 
+            background: #34495e; color: white; font-size: 0.9em; font-weight: bold;
         }
+        input:focus { outline: none; border-color: #3498db; }
+
+        button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; }
+        .btn-gps { background: #2980b9; color: white; }
+        .btn-graficar { background: #e67e22; color: white; } /* Naranja para agregar */
+        .btn-limpiar { background: #c0392b; color: white; } /* Rojo para borrar */
+
+        /* CAJA DE INFO DE DISTANCIA */
+        #info-box {
+            margin-top: 10px; padding: 10px; background: rgba(0,0,0,0.3); 
+            border-radius: 5px; font-size: 0.85em; text-align: center; display: none;
+            line-height: 1.4;
+        }
+        .seguro { color: #2ecc71; border: 2px solid #2ecc71; background: rgba(46, 204, 113, 0.1); }
+        .peligro { color: #e74c3c; border: 2px solid #e74c3c; background: rgba(231, 76, 60, 0.1); animation: parpadeo 1s infinite; }
+
+        @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
+
+        /* VISOR UTM */
+        #utm-display {
+            font-size: 0.7em; color: #f39c12; margin-bottom: 10px; text-align: center; font-family: monospace;
+        }
+        
+        /* CONTADOR DE ZONAS */
+        #zona-counter {
+            text-align: center; font-size: 0.7em; color: #bdc3c7; margin-bottom: 5px;
+        }
+
+        .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 2px black); }
+        .leaflet-control-layers { border-radius: 8px; padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
@@ -64,22 +71,26 @@
 <button id="menu-toggle" onclick="togglePanel()">☰</button>
 
 <div id="panel">
+    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR GPS</button>
     
-    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR MI GPS</button>
+    <div id="utm-display">Esperando GPS...</div>
 
-    <h4>💥 Voladura</h4>
+    <h4>💥 Agregar Voladura</h4>
     <label>Norte (Y):</label>
-    <input type="number" id="norte" value="">
+    <input type="number" id="norte" value="" inputmode="decimal">
+    
     <label>Este (X):</label>
-    <input type="number" id="este" value="">
+    <input type="number" id="este" value="" inputmode="decimal">
+    
     <label>Radio (m):</label>
-    <input type="number" id="radio" value="">
-    <button class="btn-graficar" onclick="procesarVoladura()">GRAFICAR ZONA ROJA</button>
-    <button class="btn-limpiar" onclick="limpiarMapa()">LIMPIAR MAPA</button>
+    <input type="number" id="radio" value="700" inputmode="decimal">
 
-    <div style="margin-top:15px; font-size: 0.7em; color: #95a5a6; text-align: center;">
-        <i>Toca ☰ para ocultar este menú y ver el mapa completo.</i>
-    </div>
+    <button class="btn-graficar" onclick="agregarZona()">➕ AGREGAR ZONA</button>
+    <div id="zona-counter">Zonas activas: 0</div>
+    
+    <div id="info-box"></div>
+
+    <button class="btn-limpiar" onclick="limpiarMapa()">🗑️ BORRAR TODO</button>
 </div>
 
 <div id="map"></div>
@@ -88,109 +99,164 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // --- 1. FUNCIÓN PARA ESCONDER EL PANEL ---
-    function togglePanel() {
-        var panel = document.getElementById('panel');
-        // Agrega o quita la clase "escondido"
-        panel.classList.toggle('escondido');
-    }
+    function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
 
-    // --- 2. CONFIGURACIÓN DEL MAPA ---
+    // 1. PROYECCIÓN TOROMOCHO (Zona 18S)
+    proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
+
+    // 2. CONFIGURACIÓN DE MAPAS (VOLVIÓ EL LAYOUT)
     var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
     var mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
     var mapaTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'OTM' });
 
-    var map = L.map('map', {
-        zoomControl: false,
-        layers: [mapaSatelite] 
-    }).setView([-11.619, -76.08], 13);
+    var map = L.map('map', { zoomControl: false, layers: [mapaSatelite] }).setView([-11.619, -76.08], 13);
 
     var capaVoladuras = L.layerGroup().addTo(map);
     var capaGPS = L.layerGroup().addTo(map);
     var capaTormentas = L.layerGroup().addTo(map);
+    var lineaDistancia = L.layerGroup().addTo(map); 
 
+    // CONTROL DE CAPAS (Aquí está de nuevo)
     var baseMaps = { "🌎 Satélite": mapaSatelite, "🗺️ Terreno": mapaCalles, "⛰️ Topográfico": mapaTopo };
-    var overlayMaps = { "⚡ Sensores": capaTormentas, "💥 Voladura": capaVoladuras };
-    L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+    var overlayMaps = { "⚡ Sensores": capaTormentas, "💥 Zonas Voladura": capaVoladuras};
+    L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);	 
 
-    // --- 3. ICONO CARRO VERDE ---
-    var truckIcon = L.divIcon({
-        className: 'car-container',
-        html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg">
-                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/>
-               </svg>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15]
-    });
-
-    // --- 4. SENSORES AZULES LIVIANOS ---
+    // 3. SENSORES TORMENTA
     const sensores = [
         { nombre: "Mina", lat: -11.61543, lon: -76.14331 },
         { nombre: "Carhuacoto", lat: -11.58529, lon: -76.06169 },
         { nombre: "Tunshuruco", lat: -11.67360, lon: -76.13777 },
         { nombre: "Kingsmill", lat: -11.63342, lon: -76.05691 }
     ];
-    function dibujarSensores() {
-        sensores.forEach(sensor => {
-            L.marker([sensor.lat, sensor.lon], {
-                icon: L.divIcon({ html: '⚡', className: '', iconSize: [20, 20], iconAnchor: [10, 10] })
-            }).bindPopup(`<b>Sensor: ${sensor.nombre}</b>`).addTo(capaTormentas);
-            L.circle([sensor.lat, sensor.lon], {
-                radius: 5200, color: '#3498db', fillColor: '#3498db', fillOpacity: 0.15, weight: 1
-            }).addTo(capaTormentas);
-        });
-    }
-    dibujarSensores();
+    sensores.forEach(s => {
+        L.marker([s.lat, s.lon], {icon: L.divIcon({html:'⚡', className:''})}).addTo(capaTormentas);
+        L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
+    });
 
-    // --- 5. GPS INTELIGENTE ---
+    // 4. GPS
+    var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
+    var miPosicionLatLon = null;
 
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
-        if (!navigator.geolocation) { alert("❌ Sin soporte GPS."); return; }
-
-        btn.innerHTML = "🔄 Buscando...";
-        btn.style.backgroundColor = "#e67e22";
-
+        if (!navigator.geolocation) { alert("❌ Sin GPS"); return; }
+        btn.innerHTML = "🔄 Buscando..."; btn.style.backgroundColor = "#e67e22";
+        
         navigator.geolocation.watchPosition(
             (pos) => {
-                var latLng = [pos.coords.latitude, pos.coords.longitude];
-                btn.innerHTML = "✅ GPS ACTIVO";
-                btn.style.backgroundColor = "#27ae60";
+                var lat = pos.coords.latitude;
+                var lon = pos.coords.longitude;
+                miPosicionLatLon = L.latLng(lat, lon);
 
-                if (!marcadorVehiculo) {
-                    marcadorVehiculo = L.marker(latLng, { icon: truckIcon }).addTo(capaGPS);
-                    map.flyTo(latLng, 18);
-                    if (!map.hasLayer(capaGPS)) { map.addLayer(capaGPS); }
-                } else {
-                    marcadorVehiculo.setLatLng(latLng);
-                }
+                try {
+                    var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
+                    document.getElementById("utm-display").innerHTML = `📍 UTM ACTUAL:<br>N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
+                } catch(e) {}
+
+                btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
+                
+                if (!marcadorVehiculo) { 
+                    marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); 
+                    map.flyTo([lat, lon], 16); 
+                } else { marcadorVehiculo.setLatLng([lat, lon]); }
+
+                calcularSeguridad(); // Recalcular cada vez que me muevo
             },
-            (err) => {
-                console.warn(err);
-                btn.innerHTML = "⚠️ REINTENTAR";
-                btn.style.backgroundColor = "#c0392b";
-                if(err.code === 1) alert("⛔ ACTIVA EL PERMISO DE UBICACIÓN EN EL NAVEGADOR.");
-            },
+            (err) => { btn.innerHTML = "⚠️ ERROR GPS"; btn.style.backgroundColor = "#c0392b"; }, 
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     }
 
-    function procesarVoladura() {
+    // 5. GESTIÓN DE MÚLTIPLES VOLADURAS
+    var zonasActivas = []; // Aquí guardaremos todas las voladuras
+
+    function agregarZona() {
         const n = parseFloat(document.getElementById('norte').value);
         const e = parseFloat(document.getElementById('este').value);
         const r = parseFloat(document.getElementById('radio').value);
-        const utm18S = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs";
+
+        if (isNaN(n) || isNaN(e) || isNaN(r)) { alert("Faltan datos"); return; }
+        
         try {
-            const c = proj4(utm18S, "+proj=longlat +datum=WGS84 +no_defs", [e, n]);
-            L.circle([c[1], c[0]], { 
+            const c = proj4("EPSG:32718", "EPSG:4326", [e, n]); 
+            var centro = L.latLng(c[1], c[0]);
+
+            // Dibujamos el círculo
+            var circulo = L.circle(centro, { 
                 radius: r, color: 'red', fillColor: '#e74c3c', fillOpacity: 0.4, weight: 2 
-            }).bindPopup("ZONA DE VOLADURA").addTo(capaVoladuras);
-            map.flyTo([c[1], c[0]], 14);
-        } catch (err) { alert("Coordenadas incorrectas"); }
+            }).bindPopup(`ZONA VOLADURA #${zonasActivas.length + 1}`).addTo(capaVoladuras);
+            
+            // AGREGAMOS A LA LISTA (No borramos lo anterior)
+            zonasActivas.push({
+                centro: centro,
+                radio: r,
+                layer: circulo
+            });
+
+            document.getElementById("zona-counter").innerText = `Zonas activas: ${zonasActivas.length}`;
+            map.flyTo(centro, 14);
+            calcularSeguridad(); // Calcular inmediatamente
+
+        } catch (err) { alert("Error Coordenadas"); }
     }
 
-    function limpiarMapa() { capaVoladuras.clearLayers(); }
+    // --- LÓGICA MAESTRA DE SEGURIDAD (Busca la más cercana) ---
+    function calcularSeguridad() {
+        if (!miPosicionLatLon || zonasActivas.length === 0) return;
+
+        var infoBox = document.getElementById("info-box");
+        lineaDistancia.clearLayers();
+
+        // 1. Buscamos cuál es la zona más peligrosa (menor distancia al borde)
+        // La "distancia al borde" es (DistanciaCentro - Radio).
+        // Si es negativa, estás DENTRO. Si es positiva, estás AFUERA.
+        // Queremos el valor ALGEBRAICO más bajo (ej. -50 es más peligroso que +200).
+
+        var zonaMasCritica = null;
+        var minDistanciaBorde = Infinity;
+
+        zonasActivas.forEach(zona => {
+            var distCentro = map.distance(miPosicionLatLon, zona.centro);
+            var distBorde = distCentro - zona.radio;
+
+            if (distBorde < minDistanciaBorde) {
+                minDistanciaBorde = distBorde;
+                zonaMasCritica = zona;
+            }
+        });
+
+        // 2. Mostramos la alerta basada en la zona más crítica
+        if (minDistanciaBorde <= 0) {
+            // ESTÁS DENTRO DE AL MENOS UNA ZONA
+            var metrosSalir = Math.abs(minDistanciaBorde);
+            infoBox.style.display = "block";
+            infoBox.className = "peligro";
+            infoBox.innerHTML = `⚠️ <b>¡PELIGRO!</b><br>Estás DENTRO de una zona roja.<br>Sal a <b>${metrosSalir.toFixed(0)}m</b> ya.`;
+            
+            // Línea roja sólida hacia el centro de esa zona
+            L.polyline([miPosicionLatLon, zonaMasCritica.centro], {color: 'red', weight: 4}).addTo(lineaDistancia);
+
+        } else {
+            // ESTÁS FUERA DE TODAS (Pero te avisamos de la más cercana)
+            infoBox.style.display = "block";
+            infoBox.className = "seguro";
+            infoBox.innerHTML = `✅ <b>ZONA SEGURA</b><br>Zona más cercana a: <b>${minDistanciaBorde.toFixed(0)}m</b>.`;
+            
+            // Línea punteada blanca
+            L.polyline([miPosicionLatLon, zonaMasCritica.centro], {color: 'white', dashArray: '5, 10', weight: 2}).addTo(lineaDistancia);
+        }
+    }
+
+    function limpiarMapa() { 
+        capaVoladuras.clearLayers(); 
+        lineaDistancia.clearLayers();
+        document.getElementById("info-box").style.display = "none";
+        
+        // Reiniciamos la memoria de zonas
+        zonasActivas = [];
+        document.getElementById("zona-counter").innerText = `Zonas activas: 0`;
+    }
 </script>
 </body>
 </html>
