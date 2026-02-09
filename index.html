@@ -3,50 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VISOR VOLADURA - TOROMOCHO</title>
+    <title>VISOR TOROMOCHO - GPS</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
+        /* Panel de Control */
         #panel { 
             position: absolute; top: 10px; left: 10px; 
-            width: 190px; background: rgba(33, 47, 61, 0.95); 
+            width: 200px; background: rgba(33, 47, 61, 0.95); 
             color: white; padding: 10px; border-radius: 8px; 
-            z-index: 1000; font-family: 'Segoe UI', sans-serif;
+            z-index: 1000; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            max-height: 90vh; overflow-y: auto;
         }
 
-        h3 { margin: 0 0 5px 0; font-size: 0.8em; color: #2ecc71; text-align: center; }
-        label { font-size: 0.65em; color: #bdc3c7; display: block; }
-        input { width: 100%; padding: 5px; margin: 2px 0; border-radius: 4px; border: none; background: #34495e; color: white; font-size: 0.8em; }
+        h3 { margin: 0 0 5px 0; font-size: 0.85em; color: #3498db; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
+        h4 { margin: 10px 0 5px 0; font-size: 0.75em; color: #2ecc71; text-transform: uppercase; }
         
-        button { width: 100%; padding: 8px; margin: 3px 0; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; }
+        label { font-size: 0.65em; color: #bdc3c7; display: block; margin-top: 3px; }
+        input { width: 95%; padding: 4px; margin: 2px 0; border-radius: 4px; border: none; background: #34495e; color: white; font-size: 0.8em; }
+        
+        button { width: 100%; padding: 8px; margin: 5px 0; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
         .btn-gps { background: #2980b9; color: white; }
         .btn-graficar { background: #c0392b; color: white; }
         .btn-limpiar { background: #7f8c8d; color: white; }
-
-        /* Icono de Camioneta (SVG) */
-        .car-icon {
-            width: 30px;
-            height: 30px;
+        
+        .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 2px black); }
+        
+        /* Ajuste de capas para móviles */
+        .leaflet-control-layers {
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            padding: 5px;
         }
     </style>
 </head>
 <body>
 
 <div id="panel">
-    <button class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR GPS</button>
-    <h3>NUEVA VOLADURA</h3>
+    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR MI GPS</button>
+
+    <h4>💥 Voladura</h4>
     <label>Norte (Y):</label>
     <input type="number" id="norte" value="8716250">
     <label>Este (X):</label>
     <input type="number" id="este" value="375250">
     <label>Radio (m):</label>
     <input type="number" id="radio" value="500">
+    <button class="btn-graficar" onclick="procesarVoladura()">GRAFICAR ZONA ROJA</button>
+    <button class="btn-limpiar" onclick="limpiarMapa()">LIMPIAR MAPA</button>
 
-    <button class="btn-graficar" onclick="procesarMapa()">GRAFICAR</button>
-    <button class="btn-limpiar" onclick="limpiarMapa()">LIMPIAR</button>
+    <div style="margin-top:15px; font-size: 0.7em; color: #95a5a6; text-align: center;">
+        <i>Si no ves tu ubicación, revisa que el candado 🔒 del navegador tenga permisos activados.</i>
+    </div>
 </div>
 
 <div id="map"></div>
@@ -55,14 +66,27 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.02], 14);
+    // 1. DEFINICIÓN DE MAPAS
+    var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
+    var mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
+    var mapaTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'OTM' });
+
+    // 2. CONFIGURACIÓN DEL MAPA
+    var map = L.map('map', {
+        zoomControl: false,
+        layers: [mapaSatelite] 
+    }).setView([-11.619, -76.08], 13);
+
     var capaVoladuras = L.layerGroup().addTo(map);
-    var capaGPS = L.layerGroup().addTo(map);
-    var marcadorVehiculo = null;
+    var capaGPS = L.layerGroup().addTo(map); // Aseguramos que esté añadido
+    var capaTormentas = L.layerGroup().addTo(map);
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
+    // 3. CONTROL DE CAPAS
+    var baseMaps = { "🌎 Satélite": mapaSatelite, "🗺️ Terreno": mapaCalles, "⛰️ Topográfico": mapaTopo };
+    var overlayMaps = { "⚡ Sensores": capaTormentas, "💥 Voladura": capaVoladuras, "📍 Mi Ubicación": capaGPS };
+    L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
 
-    // Definimos el icono de la camioneta (COLOR CAMBIADO A VERDE)
+    // 4. ICONO CARRO
     var truckIcon = L.divIcon({
         className: 'car-container',
         html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg">
@@ -72,46 +96,97 @@
         iconAnchor: [15, 15]
     });
 
+    // 5. SENSORES
+    const sensores = [
+        { nombre: "Mina", lat: -11.61543, lon: -76.14331 },
+        { nombre: "Carhuacoto", lat: -11.58529, lon: -76.06169 },
+        { nombre: "Tunshuruco", lat: -11.67360, lon: -76.13777 },
+        { nombre: "Kingsmill", lat: -11.63342, lon: -76.05691 }
+    ];
+    function dibujarSensores() {
+        sensores.forEach(sensor => {
+            L.marker([sensor.lat, sensor.lon], {
+                icon: L.divIcon({ html: '⚡', className: '', iconSize: [20, 20], iconAnchor: [10, 10] })
+            }).bindPopup(`<b>Sensor: ${sensor.nombre}</b>`).addTo(capaTormentas);
+            L.circle([sensor.lat, sensor.lon], {
+                radius: 5200, color: '#3498db', fillColor: '#3498db', fillOpacity: 0.15, weight: 1
+            }).addTo(capaTormentas);
+        });
+    }
+    dibujarSensores();
+
+    // 6. LÓGICA DE GPS MEJORADA
+    var marcadorVehiculo = null;
+
     function iniciarSeguimiento() {
-        navigator.geolocation.watchPosition(function(pos) {
-            var latLng = [pos.coords.latitude, pos.coords.longitude];
-            // Si no existe el marcador, lo crea
-            if (!marcadorVehiculo) {
-                marcadorVehiculo = L.marker(latLng, { icon: truckIcon }).addTo(capaGPS);
-                map.flyTo(latLng, 16);
-            } else {
-                // Si ya existe, solo actualiza la posición
-                marcadorVehiculo.setLatLng(latLng);
+        var btn = document.getElementById("btnGps");
+        
+        if (!navigator.geolocation) {
+            alert("❌ Tu navegador no soporta GPS.");
+            return;
+        }
+
+        // Cambiamos el texto del botón para saber que está pensando
+        btn.innerHTML = "🔄 Buscando satélites...";
+        btn.style.backgroundColor = "#e67e22"; // Naranja
+
+        navigator.geolocation.watchPosition(
+            (pos) => {
+                // ÉXITO: Encontramos ubicación
+                var latLng = [pos.coords.latitude, pos.coords.longitude];
+                
+                // Actualizamos botón a VERDE
+                btn.innerHTML = "✅ GPS ACTIVO";
+                btn.style.backgroundColor = "#27ae60";
+
+                if (!marcadorVehiculo) {
+                    marcadorVehiculo = L.marker(latLng, { icon: truckIcon }).addTo(capaGPS);
+                    map.flyTo(latLng, 18); // Zoom fuerte al carro
+                    // Aseguramos que la capa esté visible
+                    if (!map.hasLayer(capaGPS)) {
+                        map.addLayer(capaGPS);
+                    }
+                } else {
+                    marcadorVehiculo.setLatLng(latLng);
+                }
+            },
+            (err) => {
+                // ERROR: Algo falló
+                console.warn(err);
+                btn.innerHTML = "⚠️ REINTENTAR GPS";
+                btn.style.backgroundColor = "#c0392b"; // Rojo
+                
+                if(err.code === 1) {
+                    alert("⛔ PERMISO DENEGADO: Ve a la configuración de tu navegador (el candado 🔒 junto a la URL) y permite el acceso a la Ubicación.");
+                } else if (err.code === 2) {
+                    alert("📡 SIN SEÑAL: No se puede obtener la posición. Sal al aire libre.");
+                } else if (err.code === 3) {
+                    alert("⏱️ TIMEOUT: Se agotó el tiempo de espera.");
+                }
+            },
+            { 
+                enableHighAccuracy: true, 
+                timeout: 10000, 
+                maximumAge: 0 
             }
-        }, function(error) {
-            console.warn("Error GPS:", error);
-            alert("Para ver el carro verde, activa el GPS del dispositivo.");
-        }, { enableHighAccuracy: true });
+        );
     }
 
-    function procesarMapa() {
+    function procesarVoladura() {
         const n = parseFloat(document.getElementById('norte').value);
         const e = parseFloat(document.getElementById('este').value);
         const r = parseFloat(document.getElementById('radio').value);
-        // Configuración UTM Zona 18 Sur (Toromocho)
         const utm18S = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs";
-        
         try {
             const c = proj4(utm18S, "+proj=longlat +datum=WGS84 +no_defs", [e, n]);
             L.circle([c[1], c[0]], { 
-                radius: r, 
-                color: 'red', 
-                fillColor: '#f03', 
-                fillOpacity: 0.35, 
-                weight: 3 
-            }).addTo(capaVoladuras);
-            map.flyTo([c[1], c[0]], 15);
-        } catch (err) { alert("Coordenadas inválidas"); }
+                radius: r, color: 'red', fillColor: '#e74c3c', fillOpacity: 0.4, weight: 2 
+            }).bindPopup("ZONA DE VOLADURA").addTo(capaVoladuras);
+            map.flyTo([c[1], c[0]], 14);
+        } catch (err) { alert("Coordenadas incorrectas"); }
     }
 
-    function limpiarMapa() {
-        capaVoladuras.clearLayers();
-    }
+    function limpiarMapa() { capaVoladuras.clearLayers(); }
 </script>
 </body>
 </html>
