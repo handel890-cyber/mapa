@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>MAPA UBICACIÓN VOLADURA</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; }
+        #panel { width: 350px; background: #2c3e50; color: white; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.3); z-index: 1000; overflow-y: auto; }
+        #map { flex-grow: 1; }
+        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 5px; border: none; box-sizing: border-box; }
+        .btn-graficar { background: #27ae60; color: white; font-weight: bold; cursor: pointer; }
+        .btn-gps { background: #2980b9; color: white; font-weight: bold; cursor: pointer; }
+        button:hover { opacity: 0.9; }
+        label { font-size: 0.85em; color: #bdc3c7; display: block; margin-top: 10px; }
+        hr { border: 0; border-top: 1px solid #7f8c8d; margin: 20px 0; }
+    </style>
+</head>
+<body>
+
+<div id="panel">
+    <h2>Visor Geográfico</h2>
+    
+    <button class="btn-gps" onclick="encontrarMiUbicacion()">📍 ¿Dónde estoy yo?</button>
+    <hr>
+    <h3>Graficar UTM</h3>
+    <label>Coordenada Norte (Y):</label>
+    <input type="number" id="norte" placeholder="Ej: 8716250" value="8716250">
+    
+    <label>Coordenada Este (X):</label>
+    <input type="number" id="este" placeholder="Ej: 375250" value="375250">
+    
+    <label>Zona UTM:</label>
+    <select id="zona">
+        <option value="17">17S (Perú Oeste)</option>
+        <option value="18" selected>18S (Perú Centro)</option>
+        <option value="19">19S (Perú Este)</option>
+    </select>
+
+    <label>Radio (metros):</label>
+    <input type="number" id="radio" value="200">
+
+    <button class="btn-graficar" onclick="procesarMapa()">Graficar Punto</button>
+    
+    <div id="info" style="margin-top: 15px; font-size: 0.85em; background: #34495e; padding: 10px; border-radius: 5px;">
+        Esperando datos...
+    </div>
+</div>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
+
+<script>
+    // 1. Definir los diferentes tipos de mapas (Capas Base)
+    var mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+    });
+
+    var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EBP, and the GIS User Community'
+    });
+
+    var mapaTopografico = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        attribution: 'Map data: &copy; OpenStreetMap contributors, SRTM | Map style: &copy; OpenTopoMap (CC-BY-SA)'
+    });
+
+    var map = L.map('map', {
+        center: [-11.67, -76.14],
+        zoom: 10,
+        layers: [mapaCalles] // Capa inicial
+    });
+
+    var capasBase = {
+        "Mapa de Calles": mapaCalles,
+        "Vista Satelital": mapaSatelite,
+        "Mapa Topográfico": mapaTopografico
+    };
+
+    L.control.layers(capasBase).addTo(map);
+
+    // Capas para dibujos
+    var capaUTM = L.layerGroup().addTo(map);
+    var capaGPS = L.layerGroup().addTo(map);
+
+    function encontrarMiUbicacion() {
+        if (!navigator.geolocation) return alert("GPS no soportado");
+        navigator.geolocation.getCurrentPosition(function(pos) {
+            capaGPS.clearLayers();
+            var lat = pos.coords.latitude, lon = pos.coords.longitude;
+            L.circleMarker([lat, lon], { radius: 10, fillColor: "#e67e22", color: "#fff", fillOpacity: 0.8 }).addTo(capaGPS).bindPopup("Estás aquí").openPopup();
+            map.setView([lat, lon], 14);
+        });
+    }
+
+    function procesarMapa() {
+        capaUTM.clearLayers();
+        const n = parseFloat(document.getElementById('norte').value);
+        const e = parseFloat(document.getElementById('este').value);
+        const z = document.getElementById('zona').value;
+        const r = parseFloat(document.getElementById('radio').value);
+        const utmProj = `+proj=utm +zone=${z} +south +datum=WGS84 +units=m +no_defs`;
+        const wgs84Proj = "+proj=longlat +datum=WGS84 +no_defs";
+        try {
+            const coordenadas = proj4(utmProj, wgs84Proj, [e, n]);
+            const lng = coordenadas[0], lat = coordenadas[1];
+            L.marker([lat, lng]).addTo(capaUTM);
+            L.circle([lat, lng], { color: 'cyan', weight: 2, fillOpacity: 0.3, radius: r }).addTo(capaUTM);
+            map.setView([lat, lng], 16);
+            document.getElementById('info').innerHTML = `Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`;
+        } catch (err) { alert("Datos incorrectos"); }
+    }
+</script>
+
+</body>
+</html>
