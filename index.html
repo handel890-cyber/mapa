@@ -2,57 +2,52 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MAPA UBICACIÓN VOLADURA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>MAPA VOLADURA - MCP</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; height: 100vh; }
-        #panel { width: 350px; background: #2c3e50; color: white; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.3); z-index: 1000; overflow-y: auto; }
-        #map { flex-grow: 1; }
-        input, select, button { width: 100%; padding: 12px; margin: 8px 0; border-radius: 5px; border: none; box-sizing: border-box; }
-        .btn-graficar { background: #27ae60; color: white; font-weight: bold; cursor: pointer; }
-        .btn-gps { background: #2980b9; color: white; font-weight: bold; cursor: pointer; }
-        button:hover { opacity: 0.9; }
-        label { font-size: 0.85em; color: #bdc3c7; display: block; margin-top: 10px; }
-        hr { border: 0; border-top: 1px solid #7f8c8d; margin: 20px 0; }
-
-        /* AJUSTE PARA CELULARES */
-        @media (max-width: 600px) {
-            body { flex-direction: column; }
-            #panel { width: 100%; height: auto; order: 2; box-shadow: 0 -2px 5px rgba(0,0,0,0.3); }
-            #map { height: 50vh; width: 100%; order: 1; }
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        #map { height: 100%; width: 100%; z-index: 1; }
+        
+        /* PANEL FLOTANTE MUY COMPACTO */
+        #panel { 
+            position: absolute; top: 10px; left: 10px; 
+            width: 240px; background: rgba(44, 62, 80, 0.95); 
+            color: white; padding: 12px; border-radius: 10px; 
+            z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+            font-family: 'Segoe UI', sans-serif;
         }
+
+        h3 { margin: 0 0 8px 0; font-size: 1em; color: #2ecc71; text-align: center; }
+        label { font-size: 0.7em; color: #bdc3c7; display: block; margin-top: 4px; }
+        input, button { 
+            width: 100%; padding: 7px; margin: 3px 0; 
+            border-radius: 4px; border: none; font-size: 0.85em; 
+        }
+        
+        .btn-graficar { background: #c0392b; color: white; font-weight: bold; cursor: pointer; }
+        .btn-gps { background: #2980b9; color: white; font-weight: bold; margin-bottom: 8px; cursor: pointer; }
+        #info { font-size: 0.7em; margin-top: 6px; color: #ecf0f1; text-align: center; border-top: 1px solid #555; padding-top: 5px; }
+
+        /* Ajuste para que el selector de capas no choque con el panel en iPhone */
+        .leaflet-top.leaflet-right { top: 10px; }
     </style>
 </head>
 <body>
 
 <div id="panel">
-    <h2>Visor Geográfico</h2>
+    <button class="btn-gps" onclick="encontrarMiUbicacion()">📍 OBTENER MI UBICACIÓN</button>
     
-    <button class="btn-gps" onclick="encontrarMiUbicacion()">📍 ¿Dónde estoy yo?</button>
-    <hr>
-    <h3>Graficar UTM</h3>
-    <label>Coordenada Norte (Y):</label>
-    <input type="number" id="norte" placeholder="Ej: 8716250" value="8716250">
-    
-    <label>Coordenada Este (X):</label>
-    <input type="number" id="este" placeholder="Ej: 375250" value="375250">
-    
-    <label>Zona UTM:</label>
-    <select id="zona">
-        <option value="17">17S (Perú Oeste)</option>
-        <option value="18" selected>18S (Perú Centro)</option>
-        <option value="19">19S (Perú Este)</option>
-    </select>
+    <h3>DATOS VOLADURA</h3>
+    <label>Norte (Y):</label>
+    <input type="number" id="norte" value="8716250">
+    <label>Este (X):</label>
+    <input type="number" id="este" value="375250">
+    <label>Radio Peligro (m):</label>
+    <input type="number" id="radio" value="500">
 
-    <label>Radio (metros):</label>
-    <input type="number" id="radio" value="200">
-
-    <button class="btn-graficar" onclick="procesarMapa()">Graficar Punto</button>
-    
-    <div id="info" style="margin-top: 15px; font-size: 0.85em; background: #34495e; padding: 10px; border-radius: 5px;">
-        Esperando datos...
-    </div>
+    <button class="btn-graficar" onclick="procesarMapa()">GRAFICAR ÁREA</button>
+    <div id="info">Esperando señal GPS...</div>
 </div>
 
 <div id="map"></div>
@@ -61,80 +56,92 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // 1. Capas Base
-    var mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' });
-    var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
-    var mapaTopografico = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'OpenTopoMap' });
+    // Configuración del mapa
+    var map = L.map('map', { zoomControl: false }).setView([-11.61, -76.02], 12);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    var map = L.map('map', {
-        center: [-11.67, -76.14],
-        zoom: 10,
-        layers: [mapaCalles]
-    });
+    var calles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    var satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
 
-    var capasBase = {
-        "Mapa de Calles": mapaCalles,
-        "Vista Satelital": mapaSatelite,
-        "Mapa Topográfico": mapaTopografico
-    };
-
-    L.control.layers(capasBase).addTo(map);
+    L.control.layers({ "Mapa": calles, "Satélite": satelite }, {}, { position: 'topright' }).addTo(map);
 
     var capaUTM = L.layerGroup().addTo(map);
     var capaGPS = L.layerGroup().addTo(map);
 
     function encontrarMiUbicacion() {
-        if (!navigator.geolocation) return alert("GPS no soportado en este navegador");
-        
-        document.getElementById('info').innerHTML = "Buscando satélites... 🛰️";
+        const infoDiv = document.getElementById('info');
+        infoDiv.innerHTML = "🛰️ Buscando satélites...";
 
-        // Parámetros para forzar precisión en móviles
-        const opciones = {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
+        if (!navigator.geolocation) {
+            alert("Tu iPhone no permite GPS en este navegador.");
+            return;
+        }
+
+        // Opciones críticas para iPhone y zonas de montaña
+        const opcionesGps = {
+            enableHighAccuracy: true, // Fuerza el uso de GPS real, no solo WiFi
+            timeout: 15000,           // 15 segundos máximo para encontrar señal
+            maximumAge: 0             // No usar ubicaciones guardadas viejas
         };
 
         navigator.geolocation.getCurrentPosition(function(pos) {
             capaGPS.clearLayers();
-            var lat = pos.coords.latitude, lon = pos.coords.longitude;
-            
+            var lat = pos.coords.latitude;
+            var lon = pos.coords.longitude;
+
+            // Marcador de usuario (Azul)
             L.circleMarker([lat, lon], { 
-                radius: 10, 
-                fillColor: "#e67e22", 
+                radius: 9, 
+                fillColor: "#3498db", 
                 color: "#fff", 
                 weight: 2, 
-                fillOpacity: 0.8 
-            }).addTo(capaGPS).bindPopup("Estás aquí").openPopup();
+                fillOpacity: 1 
+            }).addTo(capaGPS).bindPopup("Tu posición actual").openPopup();
+
+            map.flyTo([lat, lon], 16);
+            infoDiv.innerHTML = "✅ Ubicación actualizada.";
+        }, function(err) {
+            // Manejo de errores específico para iPhone
+            let mensaje = "Error desconocido.";
+            if(err.code === 1) mensaje = "Permiso denegado. Ve a Ajustes > Privacidad > Localización.";
+            if(err.code === 2) mensaje = "Señal de satélite débil.";
+            if(err.code === 3) mensaje = "Tiempo de espera agotado.";
             
-            map.setView([lat, lon], 16);
-            document.getElementById('info').innerHTML = "📍 Ubicación detectada.";
-        }, function(error) {
-            alert("Error al obtener ubicación: " + error.message + ". Asegúrate de dar permisos en el candado de la URL.");
-            document.getElementById('info').innerHTML = "Error en GPS.";
-        }, opciones);
+            alert("GPS iPhone: " + mensaje);
+            infoDiv.innerHTML = "❌ Error GPS.";
+        }, opcionesGps);
     }
 
     function procesarMapa() {
         capaUTM.clearLayers();
         const n = parseFloat(document.getElementById('norte').value);
         const e = parseFloat(document.getElementById('este').value);
-        const z = document.getElementById('zona').value;
         const r = parseFloat(document.getElementById('radio').value);
         
-        const utmProj = `+proj=utm +zone=${z} +south +datum=WGS84 +units=m +no_defs`;
-        const wgs84Proj = "+proj=longlat +datum=WGS84 +no_defs";
+        // Zona 18S (Junín / Toromocho)
+        const utm18S = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs";
         
         try {
-            const coordenadas = proj4(utmProj, wgs84Proj, [e, n]);
-            const lng = coordenadas[0], lat = coordenadas[1];
-            L.marker([lat, lng]).addTo(capaUTM);
-            L.circle([lat, lng], { color: 'cyan', weight: 2, fillOpacity: 0.3, radius: r }).addTo(capaUTM);
-            map.setView([lat, lng], 16);
-            document.getElementById('info').innerHTML = `<b>Punto UTM:</b><br>Lat: ${lat.toFixed(6)}<br>Lon: ${lng.toFixed(6)}`;
-        } catch (err) { alert("Datos incorrectos"); }
+            const coords = proj4(utm18S, "+proj=longlat +datum=WGS84 +no_defs", [e, n]);
+            
+            // Marcador del punto de voladura
+
+            
+            // CÍRCULO DE RADIO ROJO
+            L.circle([coords[1], coords[0]], { 
+                radius: r, 
+                color: 'red', 
+                fillColor: '#f03', 
+                fillOpacity: 0.4,
+                weight: 3 
+            }).addTo(capaUTM);
+
+            map.flyTo([coords[1], coords[0]], 15);
+            document.getElementById('info').innerHTML = `Punto: ${coords[1].toFixed(5)}, ${coords[0].toFixed(5)}`;
+        } catch (e) { 
+            alert("Datos UTM inválidos"); 
+        }
     }
 </script>
-
 </body>
-</html>g
+</html>
