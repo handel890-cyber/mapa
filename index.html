@@ -3,51 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MAPA VOLADURA - MCP</title>
+    <title>VISOR VOLADURA - TOROMOCHO</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
-        /* PANEL FLOTANTE MUY COMPACTO */
         #panel { 
             position: absolute; top: 10px; left: 10px; 
-            width: 240px; background: rgba(44, 62, 80, 0.95); 
-            color: white; padding: 12px; border-radius: 10px; 
-            z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-            font-family: 'Segoe UI', sans-serif;
+            width: 190px; background: rgba(33, 47, 61, 0.95); 
+            color: white; padding: 10px; border-radius: 8px; 
+            z-index: 1000; font-family: 'Segoe UI', sans-serif;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
         }
 
-        h3 { margin: 0 0 8px 0; font-size: 1em; color: #2ecc71; text-align: center; }
-        label { font-size: 0.7em; color: #bdc3c7; display: block; margin-top: 4px; }
-        input, button { 
-            width: 100%; padding: 7px; margin: 3px 0; 
-            border-radius: 4px; border: none; font-size: 0.85em; 
-        }
+        h3 { margin: 0 0 5px 0; font-size: 0.8em; color: #2ecc71; text-align: center; }
+        label { font-size: 0.65em; color: #bdc3c7; display: block; }
+        input { width: 100%; padding: 5px; margin: 2px 0; border-radius: 4px; border: none; background: #34495e; color: white; font-size: 0.8em; }
         
-        .btn-graficar { background: #c0392b; color: white; font-weight: bold; cursor: pointer; }
-        .btn-gps { background: #2980b9; color: white; font-weight: bold; margin-bottom: 8px; cursor: pointer; }
-        #info { font-size: 0.7em; margin-top: 6px; color: #ecf0f1; text-align: center; border-top: 1px solid #555; padding-top: 5px; }
+        button { width: 100%; padding: 8px; margin: 3px 0; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; }
+        .btn-gps { background: #2980b9; color: white; }
+        .btn-graficar { background: #c0392b; color: white; }
+        .btn-limpiar { background: #7f8c8d; color: white; }
 
-        /* Ajuste para que el selector de capas no choque con el panel en iPhone */
-        .leaflet-top.leaflet-right { top: 10px; }
+        /* Icono de Camioneta (SVG) */
+        .car-icon {
+            width: 30px;
+            height: 30px;
+        }
     </style>
 </head>
 <body>
 
 <div id="panel">
-    <button class="btn-gps" onclick="encontrarMiUbicacion()">📍 OBTENER MI UBICACIÓN</button>
-    
-    <h3>DATOS VOLADURA</h3>
+    <button class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR GPS</button>
+    <h3>NUEVA VOLADURA</h3>
     <label>Norte (Y):</label>
     <input type="number" id="norte" value="8716250">
     <label>Este (X):</label>
     <input type="number" id="este" value="375250">
-    <label>Radio Peligro (m):</label>
+    <label>Radio (m):</label>
     <input type="number" id="radio" value="500">
 
-    <button class="btn-graficar" onclick="procesarMapa()">GRAFICAR ÁREA</button>
-    <div id="info">Esperando señal GPS...</div>
+    <button class="btn-graficar" onclick="procesarMapa()">GRAFICAR</button>
+    <button class="btn-limpiar" onclick="limpiarMapa()">LIMPIAR</button>
 </div>
 
 <div id="map"></div>
@@ -56,91 +55,62 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // Configuración del mapa
-    var map = L.map('map', { zoomControl: false }).setView([-11.61, -76.02], 12);
-    L.control.zoom({ position: 'bottomright' }).addTo(map);
-
-    var calles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-    var satelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}');
-
-    L.control.layers({ "Mapa": calles, "Satélite": satelite }, {}, { position: 'topright' }).addTo(map);
-
-    var capaUTM = L.layerGroup().addTo(map);
+    var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.02], 14);
+    var capaVoladuras = L.layerGroup().addTo(map);
     var capaGPS = L.layerGroup().addTo(map);
+    var marcadorVehiculo = null;
 
-    function encontrarMiUbicacion() {
-        const infoDiv = document.getElementById('info');
-        infoDiv.innerHTML = "🛰️ Buscando satélites...";
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(map);
 
-        if (!navigator.geolocation) {
-            alert("Tu iPhone no permite GPS en este navegador.");
-            return;
-        }
+    // Definimos el icono de la camioneta (COLOR CAMBIADO A VERDE)
+    var truckIcon = L.divIcon({
+        className: 'car-container',
+        html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg">
+                <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/>
+               </svg>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15]
+    });
 
-        // Opciones críticas para iPhone y zonas de montaña
-        const opcionesGps = {
-            enableHighAccuracy: true, // Fuerza el uso de GPS real, no solo WiFi
-            timeout: 15000,           // 15 segundos máximo para encontrar señal
-            maximumAge: 0             // No usar ubicaciones guardadas viejas
-        };
-
-        navigator.geolocation.getCurrentPosition(function(pos) {
-            capaGPS.clearLayers();
-            var lat = pos.coords.latitude;
-            var lon = pos.coords.longitude;
-
-            // Marcador de usuario (Azul)
-            L.circleMarker([lat, lon], { 
-                radius: 9, 
-                fillColor: "#3498db", 
-                color: "#fff", 
-                weight: 2, 
-                fillOpacity: 1 
-            }).addTo(capaGPS).bindPopup("Tu posición actual").openPopup();
-
-            map.flyTo([lat, lon], 16);
-            infoDiv.innerHTML = "✅ Ubicación actualizada.";
-        }, function(err) {
-            // Manejo de errores específico para iPhone
-            let mensaje = "Error desconocido.";
-            if(err.code === 1) mensaje = "Permiso denegado. Ve a Ajustes > Privacidad > Localización.";
-            if(err.code === 2) mensaje = "Señal de satélite débil.";
-            if(err.code === 3) mensaje = "Tiempo de espera agotado.";
-            
-            alert("GPS iPhone: " + mensaje);
-            infoDiv.innerHTML = "❌ Error GPS.";
-        }, opcionesGps);
+    function iniciarSeguimiento() {
+        navigator.geolocation.watchPosition(function(pos) {
+            var latLng = [pos.coords.latitude, pos.coords.longitude];
+            // Si no existe el marcador, lo crea
+            if (!marcadorVehiculo) {
+                marcadorVehiculo = L.marker(latLng, { icon: truckIcon }).addTo(capaGPS);
+                map.flyTo(latLng, 16);
+            } else {
+                // Si ya existe, solo actualiza la posición
+                marcadorVehiculo.setLatLng(latLng);
+            }
+        }, function(error) {
+            console.warn("Error GPS:", error);
+            alert("Para ver el carro verde, activa el GPS del dispositivo.");
+        }, { enableHighAccuracy: true });
     }
 
     function procesarMapa() {
-        capaUTM.clearLayers();
         const n = parseFloat(document.getElementById('norte').value);
         const e = parseFloat(document.getElementById('este').value);
         const r = parseFloat(document.getElementById('radio').value);
-        
-        // Zona 18S (Junín / Toromocho)
+        // Configuración UTM Zona 18 Sur (Toromocho)
         const utm18S = "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs";
         
         try {
-            const coords = proj4(utm18S, "+proj=longlat +datum=WGS84 +no_defs", [e, n]);
-            
-            // Marcador del punto de voladura
-
-            
-            // CÍRCULO DE RADIO ROJO
-            L.circle([coords[1], coords[0]], { 
+            const c = proj4(utm18S, "+proj=longlat +datum=WGS84 +no_defs", [e, n]);
+            L.circle([c[1], c[0]], { 
                 radius: r, 
                 color: 'red', 
                 fillColor: '#f03', 
-                fillOpacity: 0.4,
+                fillOpacity: 0.35, 
                 weight: 3 
-            }).addTo(capaUTM);
+            }).addTo(capaVoladuras);
+            map.flyTo([c[1], c[0]], 15);
+        } catch (err) { alert("Coordenadas inválidas"); }
+    }
 
-            map.flyTo([coords[1], coords[0]], 15);
-            document.getElementById('info').innerHTML = `Punto: ${coords[1].toFixed(5)}, ${coords[0].toFixed(5)}`;
-        } catch (e) { 
-            alert("Datos UTM inválidos"); 
-        }
+    function limpiarMapa() {
+        capaVoladuras.clearLayers();
     }
 </script>
 </body>
