@@ -33,8 +33,8 @@
         button:active { transform: scale(0.98); }
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
-        .btn-debug { background: #34495e; color: #bdc3c7; font-size: 0.7em; padding: 5px; } /* Nuevo Botón */
 
+        /* ALERTA SILENCIO RADIAL (ABAJO) */
         #radio-silence-alert {
             position: absolute; bottom: 30px; left: 20px; right: 20px;
             background: rgba(231, 76, 60, 0.95); color: white;
@@ -45,7 +45,6 @@
             text-transform: uppercase;
             animation: parpadeo-fuerte 0.8s infinite alternate;
         }
-
         @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
 
         #reloj-sistema { 
@@ -75,13 +74,6 @@
         .proximity-critical { background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b; color: #ff6b6b; }
         @keyframes parpadeo-suave { from { opacity: 0.8; } to { opacity: 1; } }
 
-        /* VISOR DE DEPURACIÓN (OCULTO POR DEFECTO) */
-        #debug-console {
-            display: none; background: #000; color: #0f0; font-family: monospace;
-            font-size: 0.6em; padding: 5px; margin-top: 5px; border: 1px solid #0f0;
-            max-height: 100px; overflow-y: scroll; text-align: left;
-        }
-
         .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
         .footer-dev b { color: #3498db; }
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
@@ -110,9 +102,6 @@
     
     <button class="btn-sync" onclick="cargarDesdeGoogle()">🔄 ACTUALIZAR DE EXCEL</button>
     
-    <button class="btn-debug" onclick="toggleDebug()">👁️ VER DATOS CRUDOS (DEBUG)</button>
-    <div id="debug-console">Esperando datos...</div>
-    
     <div id="lista-voladuras" style="margin-top: 15px;">
         <div style="text-align:center; color:#bdc3c7; font-size:0.8em; padding:20px;">
             <i>Cargando datos...</i>
@@ -132,10 +121,6 @@
     var GOOGLE_CSV_LINK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
 
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
-    function toggleDebug() { 
-        var d = document.getElementById('debug-console'); 
-        d.style.display = (d.style.display === 'block') ? 'none' : 'block'; 
-    }
 
     // 1. RELOJ
     setInterval(() => {
@@ -144,7 +129,7 @@
             ahora.toLocaleTimeString('es-PE', { hour12: false });
     }, 1000);
 
-    // 2. MAPA
+    // 2. CONFIGURACIÓN DEL MAPA
     proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
     var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.08], 13);
 
@@ -177,29 +162,19 @@
         L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
     });
 
-    // 4. CARGA DE DATOS AGRESIVA
+    // 4. LÓGICA DE DATOS
     var zonasProgramadas = [];
-    var zonasActivasAhora = []; 
+    var zonasActivasAhora = []; // Lista crítica para seguridad
     var intervaloChequeo = null;
 
     async function cargarDesdeGoogle() {
         var btn = document.querySelector(".btn-sync");
-        var debug = document.getElementById("debug-console");
         btn.innerHTML = "⏳ CONECTANDO...";
         
         try {
-            // Añadimos un número aleatorio grande para asegurar que no se use caché
-            const nocache = Math.floor(Math.random() * 999999);
-            const response = await fetch(GOOGLE_CSV_LINK + '&t=' + Date.now() + '&nocache=' + nocache, {
-                cache: "no-store", // Orden directa al navegador de NO guardar nada
-                headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
-            });
-            
+            const response = await fetch(GOOGLE_CSV_LINK + '&t=' + Date.now());
             const text = await response.text();
             
-            // Debug: Mostrar lo que llega realmente
-            debug.innerHTML = "<b>RECIBIDO DE GOOGLE:</b><br>" + text.substring(0, 200) + "...";
-
             zonasProgramadas = [];
             const filas = text.split('\n');
 
@@ -216,11 +191,14 @@
             setTimeout(() => { btn.innerHTML = "🔄 ACTUALIZAR DE EXCEL"; }, 3000);
 
             if (intervaloChequeo) clearInterval(intervaloChequeo);
+            
+            // Ejecutamos inmediatamente y luego cada 1 segundo (MUY IMPORTANTE)
             actualizarMapaSegunHora();
-            intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000);
+            intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000); 
+
         } catch (err) {
             console.error(err);
-            alert("Error de Red. Revisa tu internet.");
+            alert("Error leyendo el Excel.");
             btn.innerHTML = "❌ ERROR";
         }
     }
@@ -232,8 +210,11 @@
         
         listaDiv.innerHTML = ""; 
         capaVoladuras.clearLayers(); 
+        
         let haySilencioRadial = false;
-        zonasActivasAhora = [];
+        
+        // REINICIAMOS LA LISTA DE PELIGRO CADA SEGUNDO
+        zonasActivasAhora = []; 
 
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
@@ -247,22 +228,33 @@
             let colorBorde = "";
             let colorMapa = "";
             let dibujar = false;
-            let esPeligroso = false;
+            let esPeligroso = false; // Flag para saber si agregarlo al GPS
 
             if (ahora > fechaFin) {
-                estadoTexto = "FINALIZADO"; colorBorde = "#7f8c8d";
+                // YA FINALIZÓ: NO SE DIBUJA, NO ES PELIGROSO
+                estadoTexto = "FINALIZADO"; 
+                colorBorde = "#7f8c8d";
             } else if (ahora >= fechaInicio && ahora <= fechaFin) {
+                // ACTIVO AHORA
                 estadoTexto = "🚨 EN EJECUCIÓN"; colorBorde = "#e74c3c";
-                colorMapa = "red"; dibujar = true; haySilencioRadial = true; esPeligroso = true;
+                colorMapa = "red"; dibujar = true; haySilencioRadial = true;
+                esPeligroso = true;
             } else {
+                // FUTURO
                 estadoTexto = "⏳ PROGRAMADO"; colorBorde = "#f39c12";
-                colorMapa = "orange"; dibujar = true; esPeligroso = true;
+                colorMapa = "orange"; dibujar = true;
+                esPeligroso = true; // Avisar también si me acerco a una programada
             }
 
+            // DIBUJAR EN EL MAPA
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
-                    if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
+                    
+                    // AQUÍ ESTÁ EL TRUCO: Solo agregamos a la lista de "Zonas Peligrosas" si NO ha finalizado
+                    if (esPeligroso) {
+                        zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
+                    }
 
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
@@ -270,6 +262,7 @@
                 } catch(e) {}
             }
 
+            // DIBUJAR EN LA LISTA DEL PANEL
             if (estadoTexto !== "FINALIZADO" || (ahora - fechaFin) < 7200000) {
                 listaDiv.innerHTML += `
                     <div class="status-row" style="border-left-color: ${colorBorde};">
@@ -281,9 +274,14 @@
 
         alertaDiv.style.display = haySilencioRadial ? "block" : "none";
         if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
+
+        // IMPORTANTE: FORZAMOS EL CHEQUEO DE SEGURIDAD AUNQUE NO TE MUEVAS
+        if (miPosicion) {
+            chequearProximidadVoladura();
+        }
     }
 
-    // 5. GPS PROXIMIDAD
+    // 5. GPS Y SEGURIDAD
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
     var miPosicion = null;
@@ -292,6 +290,7 @@
         var btn = document.getElementById("btnGps");
         if (!navigator.geolocation) { alert("Sin GPS"); return; }
         btn.innerHTML = "🔄 BUSCANDO..."; btn.style.backgroundColor = "#e67e22";
+
         navigator.geolocation.watchPosition(
             (pos) => {
                 var lat = pos.coords.latitude; var lon = pos.coords.longitude;
@@ -300,25 +299,42 @@
                     var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
                     document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
                 } catch(e) {}
+
                 btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
+
                 if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
                 else { marcadorVehiculo.setLatLng([lat, lon]); }
-                chequearTormentas(); chequearProximidadVoladura();
+
+                chequearTormentas();
+                chequearProximidadVoladura();
             },
-            (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, { enableHighAccuracy: true }
+            (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, 
+            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     }
 
     function chequearProximidadVoladura() {
-        if (!miPosicion || zonasActivasAhora.length === 0) return;
+        if (!miPosicion) return;
+        
         var box = document.getElementById("proximity-box");
-        var alertaActiva = false; var mensaje = ""; var claseCritica = false;
-        lineaDistancia.clearLayers();
+        var alertaActiva = false; 
+        var mensaje = ""; 
+        var claseCritica = false;
+        
+        lineaDistancia.clearLayers(); 
+
+        // Si no hay zonas activas ahora (lista vacía), ocultamos y salimos
+        if (zonasActivasAhora.length === 0) {
+            box.style.display = "none";
+            return;
+        }
+
         const UMBRAL_ADVERTENCIA = 1000;
 
         zonasActivasAhora.forEach(zona => {
             var distCentro = map.distance(miPosicion, zona.center);
             var distBorde = distCentro - zona.radius;
+
             if (distBorde <= 0) {
                 alertaActiva = true; claseCritica = true;
                 mensaje = `⛔ ¡PELIGRO!<br>ESTÁS DENTRO DE: ${zona.name}`;
