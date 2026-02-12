@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RADIO VOLADURA Y SENSORES TOROMOCHO</title>
+    <title>VISOR TOROMOCHO - SAFETY & PLANOS</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -119,7 +119,7 @@
 
 <script>
     // ======================================================
-    // 🔗 TU ENLACE DE GOOGLE SHEETS (YA CONFIGURADO)
+    // 🔗 TU ENLACE DE GOOGLE SHEETS
     // ======================================================
     var GOOGLE_CSV_LINK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     // ======================================================
@@ -133,22 +133,40 @@
             ahora.toLocaleTimeString('es-PE', { hour12: false });
     }, 1000);
 
-    // 2. MAPA
+    // 2. CONFIGURACIÓN DEL MAPA
     proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
     var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.08], 13);
 
-    var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
-    var mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
-
-    mapaSatelite.addTo(map); // Por defecto Satélite
+    // --- CAPAS BASE (AQUI AGREGUÉ EL PLANO Y EL TOPOGRÁFICO) ---
     
+    // Satélite (ArcGIS)
+    var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
+    
+    // Plano con Lugares (OpenStreetMap)
+    var mapaPlano = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
+
+    // Topográfico (OpenTopoMap) - ¡Nuevo!
+    var mapaTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'OTM' });
+
+    // Agregamos Satélite por defecto
+    mapaSatelite.addTo(map);
+    
+    // Capas superpuestas
     var capaVoladuras = L.layerGroup().addTo(map);
     var capaGPS = L.layerGroup().addTo(map);
     var capaTormentas = L.layerGroup().addTo(map);
 
+    // --- CONTROL DE CAPAS (BOTÓN ARRIBA DERECHA) ---
     L.control.layers(
-        { "🌎 Satélite": mapaSatelite, "🗺️ Terreno": mapaCalles }, 
-        { "⚡ Sensores": capaTormentas, "💥 Voladuras": capaVoladuras }, 
+        { 
+            "🌎 Satélite": mapaSatelite, 
+            "🗺️ Plano (Lugares)": mapaPlano,
+            "⛰️ Topográfico": mapaTopo
+        }, 
+        { 
+            "⚡ Sensores": capaTormentas, 
+            "💥 Voladuras": capaVoladuras 
+        }, 
         { position: 'topright' }
     ).addTo(map);
 
@@ -173,25 +191,22 @@
         btn.innerHTML = "⏳ CONECTANDO...";
         
         try {
-            // Añadimos timestamp para forzar actualización real
             const response = await fetch(GOOGLE_CSV_LINK + '&t=' + Date.now());
             const text = await response.text();
             
             zonasProgramadas = [];
             const filas = text.split('\n');
 
-            // Leer fila por fila (saltando la cabecera)
             for (let i = 1; i < filas.length; i++) {
                 const col = filas[i].split(',');
-                // Verificamos que la fila tenga datos válidos
                 if (col.length >= 6 && col[0].trim() !== "") {
                     zonasProgramadas.push({
                         n: parseFloat(col[0]),
                         e: parseFloat(col[1]),
                         r: parseFloat(col[2]),
                         detalle: col[3],
-                        hora: col[4].trim(), // "13:00"
-                        dur: parseInt(col[5]) // 30
+                        hora: col[4].trim(),
+                        dur: parseInt(col[5])
                     });
                 }
             }
@@ -199,14 +214,13 @@
             btn.innerHTML = "✅ SINCRONIZADO";
             setTimeout(() => { btn.innerHTML = "🔄 ACTUALIZAR DE EXCEL"; }, 3000);
 
-            // Iniciar el reloj de chequeo
             if (intervaloChequeo) clearInterval(intervaloChequeo);
             actualizarMapaSegunHora();
             intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000);
 
         } catch (err) {
             console.error(err);
-            alert("Error leyendo el Excel. Revisa tu conexión.");
+            alert("Error leyendo el Excel.");
             btn.innerHTML = "❌ ERROR";
         }
     }
@@ -224,38 +238,26 @@
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
 
-            // Crear fecha de inicio y fin para HOY
             const [hh, mm] = zona.hora.split(':');
             const fechaInicio = new Date();
             fechaInicio.setHours(hh, mm, 0);
             const fechaFin = new Date(fechaInicio.getTime() + zona.dur * 60000);
 
-            // Determinar estado
             let estadoTexto = "";
             let colorBorde = "";
             let colorMapa = "";
             let dibujar = false;
 
             if (ahora > fechaFin) {
-                // YA PASÓ
-                estadoTexto = "FINALIZADO";
-                colorBorde = "#7f8c8d";
+                estadoTexto = "FINALIZADO"; colorBorde = "#7f8c8d";
             } else if (ahora >= fechaInicio && ahora <= fechaFin) {
-                // EN CURSO
-                estadoTexto = "🚨 EN EJECUCIÓN";
-                colorBorde = "#e74c3c";
-                colorMapa = "red";
-                dibujar = true;
-                haySilencioRadial = true;
+                estadoTexto = "🚨 EN EJECUCIÓN"; colorBorde = "#e74c3c";
+                colorMapa = "red"; dibujar = true; haySilencioRadial = true;
             } else {
-                // FUTURO
-                estadoTexto = "⏳ PROGRAMADO";
-                colorBorde = "#f39c12";
-                colorMapa = "orange";
-                dibujar = true;
+                estadoTexto = "⏳ PROGRAMADO"; colorBorde = "#f39c12";
+                colorMapa = "orange"; dibujar = true;
             }
 
-            // DIBUJAR EN MAPA
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
@@ -268,7 +270,6 @@
                 } catch(e) {}
             }
 
-            // LISTA EN PANEL (Ocultar finalizados antiguos)
             if (estadoTexto !== "FINALIZADO" || (ahora - fechaFin) < 7200000) {
                 listaDiv.innerHTML += `
                     <div class="status-row" style="border-left-color: ${colorBorde};">
@@ -288,7 +289,7 @@
         alertaDiv.style.display = haySilencioRadial ? "block" : "none";
         
         if (listaDiv.innerHTML === "") {
-            listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras activas.</div>";
+            listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
         }
     }
 
