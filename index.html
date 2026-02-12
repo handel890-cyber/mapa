@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VISOR TOROMOCHO - SAFETY & PLANOS</title>
+    <title>SISTEMA GESTIÓN TOROMOCHO</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -24,7 +24,7 @@
             position: absolute; top: 60px; left: 10px; width: 260px; 
             background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
             border-radius: 8px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-            max-height: 85vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
+            max-height: 80vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
             transform: translateX(0);
         }
         #panel.escondido { transform: translateX(-350%); }
@@ -37,12 +37,14 @@
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
 
-        /* ALERTA GIGANTE DE SILENCIO RADIAL */
+        /* --- ALERTA DE SILENCIO RADIAL (ABAJO) --- */
         #radio-silence-alert {
-            position: absolute; top: 20px; left: 60px; right: 60px;
+            position: absolute; 
+            bottom: 30px; /* AHORA ESTÁ ABAJO */
+            left: 20px; right: 20px; /* Ocupa casi todo el ancho */
             background: rgba(231, 76, 60, 0.95); color: white;
             padding: 15px; border-radius: 8px; text-align: center;
-            font-weight: 900; font-size: 1.1em; z-index: 2000;
+            font-weight: 900; font-size: 1.2em; z-index: 2000;
             border: 4px solid white; display: none;
             box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
             text-transform: uppercase;
@@ -75,6 +77,21 @@
             text-align: center; font-size: 0.8em; display: none; font-weight: bold;
         }
 
+        /* ALERTA DE PROXIMIDAD (NUEVO) */
+        .proximity-alert {
+            background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12;
+            color: #e67e22; padding: 10px; margin-bottom: 10px; border-radius: 5px;
+            text-align: center; font-size: 0.9em; display: none; font-weight: bold;
+            animation: parpadeo-suave 1s infinite alternate;
+        }
+        
+        .proximity-critical {
+            background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b;
+            color: #ff6b6b;
+        }
+
+        @keyframes parpadeo-suave { from { opacity: 0.8; } to { opacity: 1; } }
+
         .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
         .footer-dev b { color: #3498db; }
         
@@ -86,7 +103,7 @@
 
 <div id="radio-silence-alert">
     🚫 SILENCIO RADIAL ACTIVO 🚫<br>
-    <span style="font-size:0.7em; font-weight:normal;">VOLADURA EN PROGRESO</span>
+    <span style="font-size:0.6em; font-weight:normal;">ZONA ROJA ACTIVADA</span>
 </div>
 
 <button id="menu-toggle" onclick="togglePanel()">☰</button>
@@ -95,11 +112,13 @@
     <div id="reloj-sistema">--:--:--</div>
     
     <div id="storm-box" class="storm-alert"></div>
+    
+    <div id="proximity-box" class="proximity-alert"></div>
 
     <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR MI GPS</button>
     <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">Esperando señal...</div>
 
-    <h4>📡 Programación Voladuras</h4>
+    <h4>📡 Voladuras de Hoy</h4>
     
     <button class="btn-sync" onclick="cargarDesdeGoogle()">🔄 ACTUALIZAR DE EXCEL</button>
     
@@ -137,40 +156,24 @@
     proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
     var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.08], 13);
 
-    // --- CAPAS BASE (AQUI AGREGUÉ EL PLANO Y EL TOPOGRÁFICO) ---
-    
-    // Satélite (ArcGIS)
     var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
-    
-    // Plano con Lugares (OpenStreetMap)
     var mapaPlano = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
-
-    // Topográfico (OpenTopoMap) - ¡Nuevo!
     var mapaTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'OTM' });
 
-    // Agregamos Satélite por defecto
     mapaSatelite.addTo(map);
     
-    // Capas superpuestas
     var capaVoladuras = L.layerGroup().addTo(map);
     var capaGPS = L.layerGroup().addTo(map);
     var capaTormentas = L.layerGroup().addTo(map);
+    var lineaDistancia = L.layerGroup().addTo(map); // Línea roja cuando te acercas
 
-    // --- CONTROL DE CAPAS (BOTÓN ARRIBA DERECHA) ---
     L.control.layers(
-        { 
-            "🌎 Satélite": mapaSatelite, 
-            "🗺️ Plano (Lugares)": mapaPlano,
-            "⛰️ Topográfico": mapaTopo
-        }, 
-        { 
-            "⚡ Sensores": capaTormentas, 
-            "💥 Voladuras": capaVoladuras 
-        }, 
+        { "🌎 Satélite": mapaSatelite, "🗺️ Plano": mapaPlano, "⛰️ Topográfico": mapaTopo }, 
+        { "⚡ Sensores": capaTormentas, "💥 Voladuras": capaVoladuras }, 
         { position: 'topright' }
     ).addTo(map);
 
-    // 3. SENSORES TORMENTA (5.2KM)
+    // 3. SENSORES TORMENTA
     const sensores = [
         { nombre: "MINA", lat: -11.61543, lon: -76.14331 },
         { nombre: "CARHUACOTO", lat: -11.58529, lon: -76.06169 },
@@ -182,8 +185,9 @@
         L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
     });
 
-    // 4. LÓGICA DE EXCEL Y HORARIOS
+    // 4. LÓGICA DE EXCEL
     var zonasProgramadas = [];
+    var zonasActivasAhora = []; // Lista simplificada para el cálculo de proximidad
     var intervaloChequeo = null;
 
     async function cargarDesdeGoogle() {
@@ -201,23 +205,17 @@
                 const col = filas[i].split(',');
                 if (col.length >= 6 && col[0].trim() !== "") {
                     zonasProgramadas.push({
-                        n: parseFloat(col[0]),
-                        e: parseFloat(col[1]),
-                        r: parseFloat(col[2]),
-                        detalle: col[3],
-                        hora: col[4].trim(),
-                        dur: parseInt(col[5])
+                        n: parseFloat(col[0]), e: parseFloat(col[1]), r: parseFloat(col[2]),
+                        detalle: col[3], hora: col[4].trim(), dur: parseInt(col[5])
                     });
                 }
             }
-
             btn.innerHTML = "✅ SINCRONIZADO";
             setTimeout(() => { btn.innerHTML = "🔄 ACTUALIZAR DE EXCEL"; }, 3000);
 
             if (intervaloChequeo) clearInterval(intervaloChequeo);
             actualizarMapaSegunHora();
             intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000);
-
         } catch (err) {
             console.error(err);
             alert("Error leyendo el Excel.");
@@ -234,6 +232,7 @@
         capaVoladuras.clearLayers(); 
         
         let haySilencioRadial = false;
+        zonasActivasAhora = []; // Reiniciamos la lista de zonas peligrosas para el GPS
 
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
@@ -247,68 +246,66 @@
             let colorBorde = "";
             let colorMapa = "";
             let dibujar = false;
+            let esPeligroso = false;
 
             if (ahora > fechaFin) {
                 estadoTexto = "FINALIZADO"; colorBorde = "#7f8c8d";
             } else if (ahora >= fechaInicio && ahora <= fechaFin) {
+                // ZONA ACTIVA (ROJA)
                 estadoTexto = "🚨 EN EJECUCIÓN"; colorBorde = "#e74c3c";
                 colorMapa = "red"; dibujar = true; haySilencioRadial = true;
+                esPeligroso = true;
             } else {
+                // ZONA FUTURA (NARANJA)
                 estadoTexto = "⏳ PROGRAMADO"; colorBorde = "#f39c12";
                 colorMapa = "orange"; dibujar = true;
+                // También consideramos peligrosas las programadas para que te avise si estás cerca
+                esPeligroso = true; 
             }
 
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
+                    // Guardamos la zona procesada para el cálculo de GPS
+                    if (esPeligroso) {
+                        zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
+                    }
+
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
-                    
                     L.circle([c[1], c[0]], { 
                         radius: zona.r, color: colorHex, fillColor: colorHex, fillOpacity: opacidad, weight: 2 
-                    }).bindPopup(`<b>${zona.detalle}</b><br>Inicio: ${zona.hora}<br>Fin: ${fechaFin.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`).addTo(capaVoladuras);
+                    }).bindPopup(`<b>${zona.detalle}</b><br>Inicio: ${zona.hora}`).addTo(capaVoladuras);
                 } catch(e) {}
             }
 
             if (estadoTexto !== "FINALIZADO" || (ahora - fechaFin) < 7200000) {
                 listaDiv.innerHTML += `
                     <div class="status-row" style="border-left-color: ${colorBorde};">
-                        <div>
-                            <strong style="font-size:1.1em">${zona.detalle}</strong><br>
-                            <span style="color:${colorBorde}; font-weight:bold;">${estadoTexto}</span>
-                        </div>
-                        <div style="text-align:right;">
-                            ${zona.hora}<br>
-                            <small>${zona.dur} min</small>
-                        </div>
-                    </div>
-                `;
+                        <div><strong style="font-size:1.1em">${zona.detalle}</strong><br><span style="color:${colorBorde}; font-weight:bold;">${estadoTexto}</span></div>
+                        <div style="text-align:right;">${zona.hora}<br><small>${zona.dur} min</small></div>
+                    </div>`;
             }
         });
 
         alertaDiv.style.display = haySilencioRadial ? "block" : "none";
-        
-        if (listaDiv.innerHTML === "") {
-            listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
-        }
+        if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
     }
 
-    // 5. GPS
+    // 5. GPS Y CÁLCULO DE PROXIMIDAD
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
     var miPosicion = null;
 
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
-        if (!navigator.geolocation) { alert("Sin GPS disponible"); return; }
+        if (!navigator.geolocation) { alert("Sin GPS"); return; }
         
-        btn.innerHTML = "🔄 BUSCANDO...";
-        btn.style.backgroundColor = "#e67e22";
+        btn.innerHTML = "🔄 BUSCANDO..."; btn.style.backgroundColor = "#e67e22";
 
         navigator.geolocation.watchPosition(
             (pos) => {
-                var lat = pos.coords.latitude;
-                var lon = pos.coords.longitude;
+                var lat = pos.coords.latitude; var lon = pos.coords.longitude;
                 miPosicion = L.latLng(lat, lon);
 
                 try {
@@ -316,42 +313,86 @@
                     document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
                 } catch(e) {}
 
-                btn.innerHTML = "✅ GPS ACTIVO";
-                btn.style.backgroundColor = "#27ae60";
+                btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
 
                 if (!marcadorVehiculo) { 
                     marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); 
                     map.flyTo([lat, lon], 16); 
-                } else { 
-                    marcadorVehiculo.setLatLng([lat, lon]); 
-                }
+                } else { marcadorVehiculo.setLatLng([lat, lon]); }
+
                 chequearTormentas();
+                chequearProximidadVoladura(); // NUEVO: Check de cercanía
             },
             (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, 
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     }
 
-    function chequearTormentas() {
-        if (!miPosicion) return;
-        var box = document.getElementById("storm-box");
-        var detectados = [];
+    // LÓGICA DE ALERTA DE PROXIMIDAD
+    function chequearProximidadVoladura() {
+        if (!miPosicion || zonasActivasAhora.length === 0) return;
+        
+        var box = document.getElementById("proximity-box");
+        var alertaActiva = false;
+        var mensaje = "";
+        var claseCritica = false;
+        lineaDistancia.clearLayers(); // Limpiar línea anterior
 
-        sensores.forEach(s => {
-            if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) {
-                detectados.push(s.nombre);
+        // Umbral de advertencia: 1000 metros (1km) fuera del radio
+        const UMBRAL_ADVERTENCIA = 1000;
+
+        zonasActivasAhora.forEach(zona => {
+            var distanciaCentro = map.distance(miPosicion, zona.center);
+            var distanciaBorde = distanciaCentro - zona.radius;
+
+            // CASO 1: ESTÁS DENTRO (CRÍTICO)
+            if (distanciaBorde <= 0) {
+                alertaActiva = true;
+                claseCritica = true;
+                mensaje = `⛔ ¡PELIGRO!<br>ESTÁS DENTRO DE: ${zona.name}`;
+                // Dibujar línea roja al centro
+                L.polyline([miPosicion, zona.center], {color: 'red', weight: 4}).addTo(lineaDistancia);
+            } 
+            // CASO 2: ESTÁS CERCA (ADVERTENCIA)
+            else if (distanciaBorde <= UMBRAL_ADVERTENCIA) {
+                // Solo mostramos advertencia si no hay una crítica ya activa
+                if (!claseCritica) {
+                    alertaActiva = true;
+                    mensaje = `⚠️ PRECAUCIÓN<br>A ${distanciaBorde.toFixed(0)}m de: ${zona.name}`;
+                    // Dibujar línea amarilla
+                    L.polyline([miPosicion, zona.center], {color: 'orange', dashArray: '5, 10'}).addTo(lineaDistancia);
+                }
             }
         });
 
-        if (detectados.length > 0) {
+        if (alertaActiva) {
             box.style.display = "block";
-            box.innerHTML = `⚡ ESTAS EN SENSOR: <br>Radio de: ${detectados.join(" y ")}`;
+            box.innerHTML = mensaje;
+            if (claseCritica) {
+                box.className = "proximity-alert proximity-critical";
+            } else {
+                box.className = "proximity-alert";
+            }
         } else {
             box.style.display = "none";
         }
     }
 
-    // Auto-carga inicial
+    function chequearTormentas() {
+        if (!miPosicion) return;
+        var box = document.getElementById("storm-box");
+        var detectados = [];
+        sensores.forEach(s => {
+            if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) detectados.push(s.nombre);
+        });
+        if (detectados.length > 0) {
+            box.style.display = "block";
+            box.innerHTML = `⚡ ESTAS EN SENSOR: <br>${detectados.join(" y ")}`;
+        } else {
+            box.style.display = "none";
+        }
+    }
+
     window.onload = function() { cargarDesdeGoogle(); }
 </script>
 </body>
