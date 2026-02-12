@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SISTEMA GESTIÓN TOROMOCHO</title>
+    <title>RADIO VOLADURA Y SENSORES TOROMOCHO</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
@@ -109,7 +109,7 @@
         </div>
     </div>
 
-    <div class="footer-dev">Dev: <b>Johann Cardenas P.</b></div>
+    <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
 </div>
 
 <div id="map"></div>
@@ -147,7 +147,7 @@
     var capaTormentas = L.layerGroup().addTo(map);
 
     L.control.layers(
-        { "🌎 Satélite": mapaSatelite, "🗺️ Calles": mapaCalles }, 
+        { "🌎 Satélite": mapaSatelite, "🗺️ Terreno": mapaCalles }, 
         { "⚡ Sensores": capaTormentas, "💥 Voladuras": capaVoladuras }, 
         { position: 'topright' }
     ).addTo(map);
@@ -344,7 +344,7 @@
 
         if (detectados.length > 0) {
             box.style.display = "block";
-            box.innerHTML = `⚡ ALERTA TORMENTA<br>Radio de: ${detectados.join(" y ")}`;
+            box.innerHTML = `⚡ ESTAS EN SENSOR: <br>Radio de: ${detectados.join(" y ")}`;
         } else {
             box.style.display = "none";
         }
