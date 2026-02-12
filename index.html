@@ -3,104 +3,113 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>VISOR TOROMOCHO - RADIO DE VOLADURA Y SENSOR DE TORMENTAS</title>
+    <title>SISTEMA GESTIÓN TOROMOCHO</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+        /* --- ESTILOS VISUALES --- */
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
-        /* BOTÓN MENÚ */
+        /* Botón Menú */
         #menu-toggle {
             position: absolute; top: 10px; left: 10px; z-index: 1100;
             background: #2c3e50; color: white; border: none; border-radius: 4px;
             width: 40px; height: 40px; font-size: 1.5em; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* PANEL */
+        /* Panel Lateral */
         #panel { 
-            position: absolute; top: 60px; left: 10px; width: 220px; 
+            position: absolute; top: 60px; left: 10px; width: 260px; 
             background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
-            border-radius: 8px; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-            max-height: 80vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
+            border-radius: 8px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
+            max-height: 85vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
             transform: translateX(0);
         }
-        #panel.escondido { transform: translateX(-300%); }
+        #panel.escondido { transform: translateX(-350%); }
 
-        h4 { margin: 10px 0 5px 0; font-size: 0.75em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
-        label { font-size: 0.65em; color: #bdc3c7; display: block; margin-top: 3px; }
+        /* Textos y Botones */
+        h4 { margin: 10px 0 5px 0; font-size: 0.8em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
         
-        input { 
-            width: 95%; padding: 6px; margin: 2px 0; border-radius: 4px; border: 1px solid #555; 
-            background: #34495e; color: white; font-size: 0.9em; font-weight: bold;
-        }
-        input:focus { outline: none; border-color: #3498db; }
-
-        button { width: 100%; padding: 10px; margin: 5px 0; border-radius: 5px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; }
+        button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.8em; transition: 0.2s; }
+        button:active { transform: scale(0.98); }
         .btn-gps { background: #2980b9; color: white; }
-        .btn-graficar { background: #e67e22; color: white; }
-        .btn-limpiar { background: #c0392b; color: white; }
+        .btn-sync { background: #8e44ad; color: white; } 
 
-        .footer-dev {
-            margin-top: 15px; padding-top: 10px; border-top: 1px solid #555;
-            text-align: center; font-size: 0.6em; color: #95a5a6; letter-spacing: 1px;
+        /* ALERTA GIGANTE DE SILENCIO RADIAL */
+        #radio-silence-alert {
+            position: absolute; top: 20px; left: 60px; right: 60px;
+            background: rgba(231, 76, 60, 0.95); color: white;
+            padding: 15px; border-radius: 8px; text-align: center;
+            font-weight: 900; font-size: 1.1em; z-index: 2000;
+            border: 4px solid white; display: none;
+            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
+            text-transform: uppercase;
+            animation: parpadeo-fuerte 0.8s infinite alternate;
         }
+
+        @keyframes parpadeo-fuerte { 
+            from { opacity: 1; transform: scale(1); } 
+            to { opacity: 0.9; transform: scale(1.02); } 
+        }
+
+        /* Reloj */
+        #reloj-sistema { 
+            font-family: monospace; color: #f1c40f; text-align: center; 
+            font-size: 1.4em; margin-bottom: 10px; border: 1px solid #555; 
+            padding: 5px; border-radius: 4px; background: rgba(0,0,0,0.3);
+        }
+
+        /* Lista de Estados */
+        .status-row { 
+            background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 6px; 
+            border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* Alerta Tormenta */
+        .storm-alert {
+            background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db;
+            color: #f1c40f; padding: 10px; margin-bottom: 10px; border-radius: 5px;
+            text-align: center; font-size: 0.8em; display: none; font-weight: bold;
+        }
+
+        .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
         .footer-dev b { color: #3498db; }
-
-        /* CAJAS DE INFORMACIÓN (ALERTAS) */
-        .alert-box {
-            margin-top: 8px; padding: 10px; border-radius: 5px; font-size: 0.8em; 
-            text-align: center; display: none; line-height: 1.3;
-        }
-
-        /* Estilo Voladura (Rojo/Verde) */
-        .seguro { color: #2ecc71; border: 1px solid #2ecc71; background: rgba(46, 204, 113, 0.1); }
-        .peligro { color: #e74c3c; border: 2px solid #e74c3c; background: rgba(231, 76, 60, 0.2); animation: parpadeo 1s infinite; }
-
-        /* Estilo Tormenta (Azul Eléctrico) */
-        .storm-active {
-            color: #f1c40f; /* Amarillo rayo */
-            border: 2px solid #3498db; /* Borde Azul */
-            background: rgba(52, 152, 219, 0.3); /* Fondo Azul transparente */
-            font-weight: bold;
-            text-shadow: 0px 0px 5px black;
-        }
-
-        @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.7; } 100% { opacity: 1; } }
-
-        #utm-display { font-size: 0.7em; color: #f39c12; margin-bottom: 10px; text-align: center; font-family: monospace; }
-        #zona-counter { text-align: center; font-size: 0.7em; color: #bdc3c7; margin-bottom: 5px; }
-
-        .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 2px black); }
+        
+        .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
         .leaflet-control-layers { border-radius: 8px; padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
+<div id="radio-silence-alert">
+    🚫 SILENCIO RADIAL ACTIVO 🚫<br>
+    <span style="font-size:0.7em; font-weight:normal;">VOLADURA EN PROGRESO</span>
+</div>
+
 <button id="menu-toggle" onclick="togglePanel()">☰</button>
 
 <div id="panel">
-    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR GPS</button>
-    <div id="utm-display">Esperando GPS...</div>
-
-    <div id="storm-box" class="alert-box"></div>
-
-    <h4>💥 Agregar Voladura</h4>
-    <label>Norte (Y):</label>
-    <input type="number" id="norte" value="" inputmode="decimal">
-    <label>Este (X):</label>
-    <input type="number" id="este" value="" inputmode="decimal">
-    <label>Radio (m):</label>
-    <input type="number" id="radio" value="700" inputmode="decimal">
-
-    <button class="btn-graficar" onclick="agregarZona()">➕ AGREGAR ZONA</button>
-    <div id="zona-counter">Zonas activas: 0</div>
+    <div id="reloj-sistema">--:--:--</div>
     
-    <div id="blasting-box" class="alert-box"></div>
+    <div id="storm-box" class="storm-alert"></div>
 
-    <button class="btn-limpiar" onclick="limpiarMapa()">🗑️ BORRAR TODO</button>
+    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR MI GPS</button>
+    <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">Esperando señal...</div>
 
-    <div class="footer-dev">Dev: <b>Johann CP</b></div>
+    <h4>📡 Programación Voladuras</h4>
+    
+    <button class="btn-sync" onclick="cargarDesdeGoogle()">🔄 ACTUALIZAR DE EXCEL</button>
+    
+    <div id="lista-voladuras" style="margin-top: 15px;">
+        <div style="text-align:center; color:#bdc3c7; font-size:0.8em; padding:20px;">
+            <i>Cargando datos...</i>
+        </div>
+    </div>
+
+    <div class="footer-dev">Dev: <b>Johann Cardenas P.</b></div>
 </div>
 
 <div id="map"></div>
@@ -109,28 +118,41 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
+    // ======================================================
+    // 🔗 TU ENLACE DE GOOGLE SHEETS (YA CONFIGURADO)
+    // ======================================================
+    var GOOGLE_CSV_LINK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
+    // ======================================================
+
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
 
-    // 1. CONFIGURACIÓN
+    // 1. RELOJ
+    setInterval(() => {
+        const ahora = new Date();
+        document.getElementById("reloj-sistema").innerText = 
+            ahora.toLocaleTimeString('es-PE', { hour12: false });
+    }, 1000);
+
+    // 2. MAPA
     proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
+    var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.08], 13);
 
     var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
     var mapaCalles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
-    var mapaTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'OTM' });
 
-    var map = L.map('map', { zoomControl: false, layers: [mapaSatelite] }).setView([-11.619, -76.08], 13);
-
+    mapaSatelite.addTo(map); // Por defecto Satélite
+    
     var capaVoladuras = L.layerGroup().addTo(map);
     var capaGPS = L.layerGroup().addTo(map);
     var capaTormentas = L.layerGroup().addTo(map);
-    var lineaDistancia = L.layerGroup().addTo(map); 
 
-    var baseMaps = { "🌎 Satélite": mapaSatelite, "🗺️ Terreno": mapaCalles, "⛰️ Topográfico": mapaTopo };
-    var overlayMaps = { "⚡ Sensores": capaTormentas, "💥 Zonas Voladura": capaVoladuras };
-    L.control.layers(baseMaps, overlayMaps, { position: 'topright' }).addTo(map);
+    L.control.layers(
+        { "🌎 Satélite": mapaSatelite, "🗺️ Calles": mapaCalles }, 
+        { "⚡ Sensores": capaTormentas, "💥 Voladuras": capaVoladuras }, 
+        { position: 'topright' }
+    ).addTo(map);
 
-    // 2. SENSORES TORMENTA (5.2km Radio)
-    const RADIO_TORMENTA = 5200; // metros
+    // 3. SENSORES TORMENTA (5.2KM)
     const sensores = [
         { nombre: "MINA", lat: -11.61543, lon: -76.14331 },
         { nombre: "CARHUACOTO", lat: -11.58529, lon: -76.06169 },
@@ -139,138 +161,197 @@
     ];
     sensores.forEach(s => {
         L.marker([s.lat, s.lon], {icon: L.divIcon({html:'⚡', className:''})}).addTo(capaTormentas);
-        L.circle([s.lat, s.lon], {radius: RADIO_TORMENTA, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
+        L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
     });
 
-    // 3. GPS & TRACKING
+    // 4. LÓGICA DE EXCEL Y HORARIOS
+    var zonasProgramadas = [];
+    var intervaloChequeo = null;
+
+    async function cargarDesdeGoogle() {
+        var btn = document.querySelector(".btn-sync");
+        btn.innerHTML = "⏳ CONECTANDO...";
+        
+        try {
+            // Añadimos timestamp para forzar actualización real
+            const response = await fetch(GOOGLE_CSV_LINK + '&t=' + Date.now());
+            const text = await response.text();
+            
+            zonasProgramadas = [];
+            const filas = text.split('\n');
+
+            // Leer fila por fila (saltando la cabecera)
+            for (let i = 1; i < filas.length; i++) {
+                const col = filas[i].split(',');
+                // Verificamos que la fila tenga datos válidos
+                if (col.length >= 6 && col[0].trim() !== "") {
+                    zonasProgramadas.push({
+                        n: parseFloat(col[0]),
+                        e: parseFloat(col[1]),
+                        r: parseFloat(col[2]),
+                        detalle: col[3],
+                        hora: col[4].trim(), // "13:00"
+                        dur: parseInt(col[5]) // 30
+                    });
+                }
+            }
+
+            btn.innerHTML = "✅ SINCRONIZADO";
+            setTimeout(() => { btn.innerHTML = "🔄 ACTUALIZAR DE EXCEL"; }, 3000);
+
+            // Iniciar el reloj de chequeo
+            if (intervaloChequeo) clearInterval(intervaloChequeo);
+            actualizarMapaSegunHora();
+            intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000);
+
+        } catch (err) {
+            console.error(err);
+            alert("Error leyendo el Excel. Revisa tu conexión.");
+            btn.innerHTML = "❌ ERROR";
+        }
+    }
+
+    function actualizarMapaSegunHora() {
+        const ahora = new Date();
+        const listaDiv = document.getElementById("lista-voladuras");
+        const alertaDiv = document.getElementById("radio-silence-alert");
+        
+        listaDiv.innerHTML = ""; 
+        capaVoladuras.clearLayers(); 
+        
+        let haySilencioRadial = false;
+
+        zonasProgramadas.forEach(zona => {
+            if (!zona.hora) return;
+
+            // Crear fecha de inicio y fin para HOY
+            const [hh, mm] = zona.hora.split(':');
+            const fechaInicio = new Date();
+            fechaInicio.setHours(hh, mm, 0);
+            const fechaFin = new Date(fechaInicio.getTime() + zona.dur * 60000);
+
+            // Determinar estado
+            let estadoTexto = "";
+            let colorBorde = "";
+            let colorMapa = "";
+            let dibujar = false;
+
+            if (ahora > fechaFin) {
+                // YA PASÓ
+                estadoTexto = "FINALIZADO";
+                colorBorde = "#7f8c8d";
+            } else if (ahora >= fechaInicio && ahora <= fechaFin) {
+                // EN CURSO
+                estadoTexto = "🚨 EN EJECUCIÓN";
+                colorBorde = "#e74c3c";
+                colorMapa = "red";
+                dibujar = true;
+                haySilencioRadial = true;
+            } else {
+                // FUTURO
+                estadoTexto = "⏳ PROGRAMADO";
+                colorBorde = "#f39c12";
+                colorMapa = "orange";
+                dibujar = true;
+            }
+
+            // DIBUJAR EN MAPA
+            if (dibujar && !isNaN(zona.n)) {
+                try {
+                    const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
+                    const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
+                    const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
+                    
+                    L.circle([c[1], c[0]], { 
+                        radius: zona.r, color: colorHex, fillColor: colorHex, fillOpacity: opacidad, weight: 2 
+                    }).bindPopup(`<b>${zona.detalle}</b><br>Inicio: ${zona.hora}<br>Fin: ${fechaFin.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}`).addTo(capaVoladuras);
+                } catch(e) {}
+            }
+
+            // LISTA EN PANEL (Ocultar finalizados antiguos)
+            if (estadoTexto !== "FINALIZADO" || (ahora - fechaFin) < 7200000) {
+                listaDiv.innerHTML += `
+                    <div class="status-row" style="border-left-color: ${colorBorde};">
+                        <div>
+                            <strong style="font-size:1.1em">${zona.detalle}</strong><br>
+                            <span style="color:${colorBorde}; font-weight:bold;">${estadoTexto}</span>
+                        </div>
+                        <div style="text-align:right;">
+                            ${zona.hora}<br>
+                            <small>${zona.dur} min</small>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        alertaDiv.style.display = haySilencioRadial ? "block" : "none";
+        
+        if (listaDiv.innerHTML === "") {
+            listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras activas.</div>";
+        }
+    }
+
+    // 5. GPS
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
-    var miPosicionLatLon = null;
+    var miPosicion = null;
 
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
-        if (!navigator.geolocation) { alert("❌ Sin GPS"); return; }
-        btn.innerHTML = "🔄 Buscando..."; btn.style.backgroundColor = "#e67e22";
+        if (!navigator.geolocation) { alert("Sin GPS disponible"); return; }
         
+        btn.innerHTML = "🔄 BUSCANDO...";
+        btn.style.backgroundColor = "#e67e22";
+
         navigator.geolocation.watchPosition(
             (pos) => {
                 var lat = pos.coords.latitude;
                 var lon = pos.coords.longitude;
-                miPosicionLatLon = L.latLng(lat, lon);
+                miPosicion = L.latLng(lat, lon);
 
-                // UTM DISPLAY
                 try {
                     var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
-                    document.getElementById("utm-display").innerHTML = `📍 UTM: N ${utm[1].toFixed(0)} | E ${utm[0].toFixed(0)}`;
+                    document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
                 } catch(e) {}
 
-                btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
-                
+                btn.innerHTML = "✅ GPS ACTIVO";
+                btn.style.backgroundColor = "#27ae60";
+
                 if (!marcadorVehiculo) { 
                     marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); 
                     map.flyTo([lat, lon], 16); 
-                } else { marcadorVehiculo.setLatLng([lat, lon]); }
-
-                // --- CÁLCULOS DE SEGURIDAD ---
-                verificarTormentas(); // NUEVO: Revisa sensores
-                calcularVoladuras();  // Revisa voladuras
+                } else { 
+                    marcadorVehiculo.setLatLng([lat, lon]); 
+                }
+                chequearTormentas();
             },
-            (err) => { btn.innerHTML = "⚠️ ERROR GPS"; btn.style.backgroundColor = "#c0392b"; }, 
+            (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, 
             { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
     }
 
-    // --- 4. LÓGICA DE TORMENTAS (NUEVO) ---
-    function verificarTormentas() {
-        if (!miPosicionLatLon) return;
+    function chequearTormentas() {
+        if (!miPosicion) return;
         var box = document.getElementById("storm-box");
-        var sensoresDetectados = [];
+        var detectados = [];
 
-        sensores.forEach(sensor => {
-            // Calculamos distancia al sensor
-            var dist = map.distance(miPosicionLatLon, [sensor.lat, sensor.lon]);
-            // Si es menor al radio (5200m), estamos dentro
-            if (dist <= RADIO_TORMENTA) {
-                sensoresDetectados.push(sensor.nombre);
+        sensores.forEach(s => {
+            if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) {
+                detectados.push(s.nombre);
             }
         });
 
-        if (sensoresDetectados.length > 0) {
+        if (detectados.length > 0) {
             box.style.display = "block";
-            box.className = "alert-box storm-active";
-            // .join(" y ") crea el texto "MINA y CARHUACOTO" si hay más de uno
-            box.innerHTML = `⚡ Estás en cobertura de:<br>${sensoresDetectados.join(" y ")}`;
+            box.innerHTML = `⚡ ALERTA TORMENTA<br>Radio de: ${detectados.join(" y ")}`;
         } else {
             box.style.display = "none";
         }
     }
 
-    // --- 5. LÓGICA DE VOLADURAS ---
-    var zonasActivas = [];
-
-    function agregarZona() {
-        const n = parseFloat(document.getElementById('norte').value);
-        const e = parseFloat(document.getElementById('este').value);
-        const r = parseFloat(document.getElementById('radio').value);
-
-        if (isNaN(n) || isNaN(e) || isNaN(r)) { alert("Faltan datos"); return; }
-        
-        try {
-            const c = proj4("EPSG:32718", "EPSG:4326", [e, n]); 
-            var centro = L.latLng(c[1], c[0]);
-
-            var circulo = L.circle(centro, { 
-                radius: r, color: 'red', fillColor: '#e74c3c', fillOpacity: 0.4, weight: 2 
-            }).bindPopup(`ZONA VOLADURA #${zonasActivas.length + 1}`).addTo(capaVoladuras);
-            
-            zonasActivas.push({ centro: centro, radio: r });
-
-            document.getElementById("zona-counter").innerText = `Zonas activas: ${zonasActivas.length}`;
-            map.flyTo(centro, 14);
-            calcularVoladuras();
-
-        } catch (err) { alert("Error Coordenadas"); }
-    }
-
-    function calcularVoladuras() {
-        if (!miPosicionLatLon || zonasActivas.length === 0) return;
-
-        var box = document.getElementById("blasting-box");
-        lineaDistancia.clearLayers();
-
-        var zonaMasCritica = null;
-        var minDistanciaBorde = Infinity;
-
-        zonasActivas.forEach(zona => {
-            var distCentro = map.distance(miPosicionLatLon, zona.centro);
-            var distBorde = distCentro - zona.radio;
-            if (distBorde < minDistanciaBorde) {
-                minDistanciaBorde = distBorde;
-                zonaMasCritica = zona;
-            }
-        });
-
-        if (minDistanciaBorde <= 0) {
-            var metrosSalir = Math.abs(minDistanciaBorde);
-            box.style.display = "block";
-            box.className = "alert-box peligro";
-            box.innerHTML = `⚠️ <b>¡PELIGRO!</b><br>DENTRO de zona roja.<br>Sal a <b>${metrosSalir.toFixed(0)}m</b>.`;
-            L.polyline([miPosicionLatLon, zonaMasCritica.centro], {color: 'red', weight: 4}).addTo(lineaDistancia);
-        } else {
-            box.style.display = "block";
-            box.className = "alert-box seguro";
-            box.innerHTML = `✅ <b>ZONA SEGURA</b><br>Voladura más cercana: <b>${minDistanciaBorde.toFixed(0)}m</b>.`;
-            L.polyline([miPosicionLatLon, zonaMasCritica.centro], {color: 'white', dashArray: '5, 10', weight: 2}).addTo(lineaDistancia);
-        }
-    }
-
-    function limpiarMapa() { 
-        capaVoladuras.clearLayers(); 
-        lineaDistancia.clearLayers();
-        document.getElementById("blasting-box").style.display = "none";
-        zonasActivas = [];
-        document.getElementById("zona-counter").innerText = `Zonas activas: 0`;
-    }
+    // Auto-carga inicial
+    window.onload = function() { cargarDesdeGoogle(); }
 </script>
 </body>
 </html>
