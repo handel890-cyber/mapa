@@ -11,7 +11,6 @@
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
-        /* Botón Menú */
         #menu-toggle {
             position: absolute; top: 10px; left: 10px; z-index: 1100;
             background: #2c3e50; color: white; border: none; border-radius: 4px;
@@ -19,29 +18,25 @@
             box-shadow: 0 2px 5px rgba(0,0,0,0.5);
         }
 
-        /* Panel Lateral */
         #panel { 
             position: absolute; top: 60px; left: 10px; width: 260px; 
             background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
             border-radius: 8px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-            max-height: 80vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
+            max-height: 85vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
             transform: translateX(0);
         }
         #panel.escondido { transform: translateX(-350%); }
 
-        /* Textos y Botones */
         h4 { margin: 10px 0 5px 0; font-size: 0.8em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
         
         button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.8em; transition: 0.2s; }
         button:active { transform: scale(0.98); }
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
+        .btn-debug { background: #34495e; color: #bdc3c7; font-size: 0.7em; padding: 5px; } /* Nuevo Botón */
 
-        /* --- ALERTA DE SILENCIO RADIAL (ABAJO) --- */
         #radio-silence-alert {
-            position: absolute; 
-            bottom: 30px; /* AHORA ESTÁ ABAJO */
-            left: 20px; right: 20px; /* Ocupa casi todo el ancho */
+            position: absolute; bottom: 30px; left: 20px; right: 20px;
             background: rgba(231, 76, 60, 0.95); color: white;
             padding: 15px; border-radius: 8px; text-align: center;
             font-weight: 900; font-size: 1.2em; z-index: 2000;
@@ -51,50 +46,44 @@
             animation: parpadeo-fuerte 0.8s infinite alternate;
         }
 
-        @keyframes parpadeo-fuerte { 
-            from { opacity: 1; transform: scale(1); } 
-            to { opacity: 0.9; transform: scale(1.02); } 
-        }
+        @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
 
-        /* Reloj */
         #reloj-sistema { 
             font-family: monospace; color: #f1c40f; text-align: center; 
             font-size: 1.4em; margin-bottom: 10px; border: 1px solid #555; 
             padding: 5px; border-radius: 4px; background: rgba(0,0,0,0.3);
         }
 
-        /* Lista de Estados */
         .status-row { 
             background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 6px; 
             border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey;
             display: flex; justify-content: space-between; align-items: center;
         }
 
-        /* Alerta Tormenta */
         .storm-alert {
             background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db;
             color: #f1c40f; padding: 10px; margin-bottom: 10px; border-radius: 5px;
             text-align: center; font-size: 0.8em; display: none; font-weight: bold;
         }
 
-        /* ALERTA DE PROXIMIDAD (NUEVO) */
         .proximity-alert {
             background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12;
             color: #e67e22; padding: 10px; margin-bottom: 10px; border-radius: 5px;
             text-align: center; font-size: 0.9em; display: none; font-weight: bold;
             animation: parpadeo-suave 1s infinite alternate;
         }
-        
-        .proximity-critical {
-            background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b;
-            color: #ff6b6b;
-        }
-
+        .proximity-critical { background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b; color: #ff6b6b; }
         @keyframes parpadeo-suave { from { opacity: 0.8; } to { opacity: 1; } }
+
+        /* VISOR DE DEPURACIÓN (OCULTO POR DEFECTO) */
+        #debug-console {
+            display: none; background: #000; color: #0f0; font-family: monospace;
+            font-size: 0.6em; padding: 5px; margin-top: 5px; border: 1px solid #0f0;
+            max-height: 100px; overflow-y: scroll; text-align: left;
+        }
 
         .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
         .footer-dev b { color: #3498db; }
-        
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
         .leaflet-control-layers { border-radius: 8px; padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
     </style>
@@ -112,7 +101,6 @@
     <div id="reloj-sistema">--:--:--</div>
     
     <div id="storm-box" class="storm-alert"></div>
-    
     <div id="proximity-box" class="proximity-alert"></div>
 
     <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR MI GPS</button>
@@ -121,6 +109,9 @@
     <h4>📡 Voladuras de Hoy</h4>
     
     <button class="btn-sync" onclick="cargarDesdeGoogle()">🔄 ACTUALIZAR DE EXCEL</button>
+    
+    <button class="btn-debug" onclick="toggleDebug()">👁️ VER DATOS CRUDOS (DEBUG)</button>
+    <div id="debug-console">Esperando datos...</div>
     
     <div id="lista-voladuras" style="margin-top: 15px;">
         <div style="text-align:center; color:#bdc3c7; font-size:0.8em; padding:20px;">
@@ -137,13 +128,14 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // ======================================================
-    // 🔗 TU ENLACE DE GOOGLE SHEETS
-    // ======================================================
+    // 🔗 TU ENLACE GOOGLE SHEETS
     var GOOGLE_CSV_LINK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
-    // ======================================================
 
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
+    function toggleDebug() { 
+        var d = document.getElementById('debug-console'); 
+        d.style.display = (d.style.display === 'block') ? 'none' : 'block'; 
+    }
 
     // 1. RELOJ
     setInterval(() => {
@@ -152,7 +144,7 @@
             ahora.toLocaleTimeString('es-PE', { hour12: false });
     }, 1000);
 
-    // 2. CONFIGURACIÓN DEL MAPA
+    // 2. MAPA
     proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
     var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.08], 13);
 
@@ -165,7 +157,7 @@
     var capaVoladuras = L.layerGroup().addTo(map);
     var capaGPS = L.layerGroup().addTo(map);
     var capaTormentas = L.layerGroup().addTo(map);
-    var lineaDistancia = L.layerGroup().addTo(map); // Línea roja cuando te acercas
+    var lineaDistancia = L.layerGroup().addTo(map);
 
     L.control.layers(
         { "🌎 Satélite": mapaSatelite, "🗺️ Plano": mapaPlano, "⛰️ Topográfico": mapaTopo }, 
@@ -185,19 +177,29 @@
         L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
     });
 
-    // 4. LÓGICA DE EXCEL
+    // 4. CARGA DE DATOS AGRESIVA
     var zonasProgramadas = [];
-    var zonasActivasAhora = []; // Lista simplificada para el cálculo de proximidad
+    var zonasActivasAhora = []; 
     var intervaloChequeo = null;
 
     async function cargarDesdeGoogle() {
         var btn = document.querySelector(".btn-sync");
+        var debug = document.getElementById("debug-console");
         btn.innerHTML = "⏳ CONECTANDO...";
         
         try {
-            const response = await fetch(GOOGLE_CSV_LINK + '&t=' + Date.now());
+            // Añadimos un número aleatorio grande para asegurar que no se use caché
+            const nocache = Math.floor(Math.random() * 999999);
+            const response = await fetch(GOOGLE_CSV_LINK + '&t=' + Date.now() + '&nocache=' + nocache, {
+                cache: "no-store", // Orden directa al navegador de NO guardar nada
+                headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+            });
+            
             const text = await response.text();
             
+            // Debug: Mostrar lo que llega realmente
+            debug.innerHTML = "<b>RECIBIDO DE GOOGLE:</b><br>" + text.substring(0, 200) + "...";
+
             zonasProgramadas = [];
             const filas = text.split('\n');
 
@@ -218,7 +220,7 @@
             intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000);
         } catch (err) {
             console.error(err);
-            alert("Error leyendo el Excel.");
+            alert("Error de Red. Revisa tu internet.");
             btn.innerHTML = "❌ ERROR";
         }
     }
@@ -230,9 +232,8 @@
         
         listaDiv.innerHTML = ""; 
         capaVoladuras.clearLayers(); 
-        
         let haySilencioRadial = false;
-        zonasActivasAhora = []; // Reiniciamos la lista de zonas peligrosas para el GPS
+        zonasActivasAhora = [];
 
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
@@ -251,31 +252,21 @@
             if (ahora > fechaFin) {
                 estadoTexto = "FINALIZADO"; colorBorde = "#7f8c8d";
             } else if (ahora >= fechaInicio && ahora <= fechaFin) {
-                // ZONA ACTIVA (ROJA)
                 estadoTexto = "🚨 EN EJECUCIÓN"; colorBorde = "#e74c3c";
-                colorMapa = "red"; dibujar = true; haySilencioRadial = true;
-                esPeligroso = true;
+                colorMapa = "red"; dibujar = true; haySilencioRadial = true; esPeligroso = true;
             } else {
-                // ZONA FUTURA (NARANJA)
                 estadoTexto = "⏳ PROGRAMADO"; colorBorde = "#f39c12";
-                colorMapa = "orange"; dibujar = true;
-                // También consideramos peligrosas las programadas para que te avise si estás cerca
-                esPeligroso = true; 
+                colorMapa = "orange"; dibujar = true; esPeligroso = true;
             }
 
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
-                    // Guardamos la zona procesada para el cálculo de GPS
-                    if (esPeligroso) {
-                        zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
-                    }
+                    if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
 
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
-                    L.circle([c[1], c[0]], { 
-                        radius: zona.r, color: colorHex, fillColor: colorHex, fillOpacity: opacidad, weight: 2 
-                    }).bindPopup(`<b>${zona.detalle}</b><br>Inicio: ${zona.hora}`).addTo(capaVoladuras);
+                    L.circle([c[1], c[0]], { radius: zona.r, color: colorHex, fillColor: colorHex, fillOpacity: opacidad, weight: 2 }).bindPopup(`<b>${zona.detalle}</b><br>Inicio: ${zona.hora}`).addTo(capaVoladuras);
                 } catch(e) {}
             }
 
@@ -292,7 +283,7 @@
         if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
     }
 
-    // 5. GPS Y CÁLCULO DE PROXIMIDAD
+    // 5. GPS PROXIMIDAD
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
     var miPosicion = null;
@@ -300,82 +291,51 @@
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
         if (!navigator.geolocation) { alert("Sin GPS"); return; }
-        
         btn.innerHTML = "🔄 BUSCANDO..."; btn.style.backgroundColor = "#e67e22";
-
         navigator.geolocation.watchPosition(
             (pos) => {
                 var lat = pos.coords.latitude; var lon = pos.coords.longitude;
                 miPosicion = L.latLng(lat, lon);
-
                 try {
                     var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
                     document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
                 } catch(e) {}
-
                 btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
-
-                if (!marcadorVehiculo) { 
-                    marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); 
-                    map.flyTo([lat, lon], 16); 
-                } else { marcadorVehiculo.setLatLng([lat, lon]); }
-
-                chequearTormentas();
-                chequearProximidadVoladura(); // NUEVO: Check de cercanía
+                if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
+                else { marcadorVehiculo.setLatLng([lat, lon]); }
+                chequearTormentas(); chequearProximidadVoladura();
             },
-            (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, 
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, { enableHighAccuracy: true }
         );
     }
 
-    // LÓGICA DE ALERTA DE PROXIMIDAD
     function chequearProximidadVoladura() {
         if (!miPosicion || zonasActivasAhora.length === 0) return;
-        
         var box = document.getElementById("proximity-box");
-        var alertaActiva = false;
-        var mensaje = "";
-        var claseCritica = false;
-        lineaDistancia.clearLayers(); // Limpiar línea anterior
-
-        // Umbral de advertencia: 1000 metros (1km) fuera del radio
+        var alertaActiva = false; var mensaje = ""; var claseCritica = false;
+        lineaDistancia.clearLayers();
         const UMBRAL_ADVERTENCIA = 1000;
 
         zonasActivasAhora.forEach(zona => {
-            var distanciaCentro = map.distance(miPosicion, zona.center);
-            var distanciaBorde = distanciaCentro - zona.radius;
-
-            // CASO 1: ESTÁS DENTRO (CRÍTICO)
-            if (distanciaBorde <= 0) {
-                alertaActiva = true;
-                claseCritica = true;
+            var distCentro = map.distance(miPosicion, zona.center);
+            var distBorde = distCentro - zona.radius;
+            if (distBorde <= 0) {
+                alertaActiva = true; claseCritica = true;
                 mensaje = `⛔ ¡PELIGRO!<br>ESTÁS DENTRO DE: ${zona.name}`;
-                // Dibujar línea roja al centro
                 L.polyline([miPosicion, zona.center], {color: 'red', weight: 4}).addTo(lineaDistancia);
-            } 
-            // CASO 2: ESTÁS CERCA (ADVERTENCIA)
-            else if (distanciaBorde <= UMBRAL_ADVERTENCIA) {
-                // Solo mostramos advertencia si no hay una crítica ya activa
+            } else if (distBorde <= UMBRAL_ADVERTENCIA) {
                 if (!claseCritica) {
                     alertaActiva = true;
-                    mensaje = `⚠️ PRECAUCIÓN<br>A ${distanciaBorde.toFixed(0)}m de: ${zona.name}`;
-                    // Dibujar línea amarilla
+                    mensaje = `⚠️ PRECAUCIÓN<br>A ${distBorde.toFixed(0)}m de: ${zona.name}`;
                     L.polyline([miPosicion, zona.center], {color: 'orange', dashArray: '5, 10'}).addTo(lineaDistancia);
                 }
             }
         });
 
         if (alertaActiva) {
-            box.style.display = "block";
-            box.innerHTML = mensaje;
-            if (claseCritica) {
-                box.className = "proximity-alert proximity-critical";
-            } else {
-                box.className = "proximity-alert";
-            }
-        } else {
-            box.style.display = "none";
-        }
+            box.style.display = "block"; box.innerHTML = mensaje;
+            box.className = claseCritica ? "proximity-alert proximity-critical" : "proximity-alert";
+        } else { box.style.display = "none"; }
     }
 
     function chequearTormentas() {
@@ -386,11 +346,8 @@
             if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) detectados.push(s.nombre);
         });
         if (detectados.length > 0) {
-            box.style.display = "block";
-            box.innerHTML = `⚡ ESTAS EN SENSOR: <br>${detectados.join(" y ")}`;
-        } else {
-            box.style.display = "none";
-        }
+            box.style.display = "block"; box.innerHTML = `⚡ ESTAS EN SENSOR: <br>${detectados.join(" y ")}`;
+        } else { box.style.display = "none"; }
     }
 
     window.onload = function() { cargarDesdeGoogle(); }
