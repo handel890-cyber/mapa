@@ -7,6 +7,7 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
+        /* ESTILOS GENERALES */
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
@@ -28,10 +29,12 @@
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
 
+        /* TABS */
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
         .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
 
+        /* LISTAS */
         .list-item { 
             background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 5px; 
             border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey;
@@ -40,22 +43,21 @@
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
 
-        /* --- NUEVO ESTILO PARA EL ÍCONO DE GENSET --- */
+        /* ÍCONO GENSET MEJORADO (SVG) */
         .genset-marker {
-            background: #8e44ad; /* Morado */
-            border-radius: 50%;
-            border: 2px solid white;
-            box-shadow: 0 0 5px black;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #8e44ad;
+            border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black;
+            display: flex; align-items: center; justify-content: center;
         }
-        .genset-marker svg {
-            width: 18px; 
-            height: 18px; 
-            fill: white; /* Dibujo blanco */
-        }
+        .genset-marker svg { width: 18px; height: 18px; fill: white; }
 
+        /* ESTILO DEL POPUP (LA TABLA DE DATOS) */
+        .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
+        .tabla-info { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.9em; }
+        .tabla-info td { padding: 2px 5px; border-bottom: 1px solid #eee; }
+        .tabla-info td:first-child { font-weight: bold; color: #555; }
+
+        /* ALERTAS */
         #radio-silence-alert {
             position: absolute; bottom: 30px; left: 20px; right: 20px;
             background: rgba(231, 76, 60, 0.95); color: white;
@@ -122,6 +124,8 @@
     // 🔗 TUS ENLACES DE GOOGLE SHEETS
     // ======================================================
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
+    
+    // Enlace GENSETS (el que me pasaste antes)
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     // ======================================================
 
@@ -179,6 +183,7 @@
         cargarGensets();
     }
 
+    // 1. CARGAR VOLADURAS
     async function cargarVoladuras() {
         var btn = document.querySelector(".btn-sync");
         btn.innerHTML = "⏳ CARGANDO...";
@@ -203,7 +208,10 @@
         } catch (err) { console.error(err); btn.innerHTML = "❌ ERROR VOL"; }
     }
 
+    // 2. CARGAR GENSETS (ACTUALIZADO CON MÁS DATOS)
     async function cargarGensets() {
+        if (!LINK_GENSETS.startsWith("http")) return; 
+        
         try {
             const response = await fetch(LINK_GENSETS + '&t=' + Date.now());
             const text = await response.text();
@@ -215,31 +223,54 @@
 
             for (let i = 1; i < filas.length; i++) {
                 const col = filas[i].split(',');
+                // Verificamos que tenga suficientes columnas (A a G son 7 columnas)
                 if (col.length >= 4 && col[0].trim() !== "") {
                     const n = parseFloat(col[0]);
                     const e = parseFloat(col[1]);
                     const nombre = col[2];
                     const estado = col[3] ? col[3].trim().toUpperCase() : "";
+                    
+                    // NUEVOS DATOS (Columnas E, F, G -> Índices 4, 5, 6)
+                    const lugar = col[4] || "Sin datos";
+                    const horas = col[5] || "-";
+                    const tension = col[6] || "-";
 
                     if (estado.includes("TRABAJANDO") && !isNaN(n)) {
                         try {
                             const c = proj4("EPSG:32718", "EPSG:4326", [e, n]);
                             const lat = c[1]; const lon = c[0];
 
-                            // --- NUEVO ÍCONO SVG ---
+                            // ÍCONO GENERADOR
                             const iconoGenset = L.divIcon({
                                 className: 'genset-marker',
                                 html: `<svg viewBox="0 0 24 24"><path d="M4 6h16v10H4z"/><path d="M6 8h12v6H6z" fill="#8e44ad"/><path d="M7 9h3v4H7zm4 0h3v4h-3zm4 0h3v4h-3z" fill="white"/><path d="M5 16v3h2v-3m10 0v3h2v-3" stroke="white" stroke-width="2"/></svg>`,
                                 iconSize: [28, 28], iconAnchor: [14, 14]
                             });
 
+                            // CONTENIDO DEL POPUP CON TABLA
+                            const popupContent = `
+                                <div style="min-width:180px;">
+                                    <h3 style="margin:0; color:#8e44ad; border-bottom:1px solid #ccc;">${nombre}</h3>
+                                    <table class="tabla-info">
+                                        <tr><td>Estado:</td><td><b style="color:#27ae60">${estado}</b></td></tr>
+                                        <tr><td>Lugar:</td><td>${lugar}</td></tr>
+                                        <tr><td>Horas:</td><td>${horas} hrs</td></tr>
+                                        <tr><td>Tensión:</td><td>${tension}</td></tr>
+                                        <tr><td>Coord:</td><td><small>${n}, ${e}</small></td></tr>
+                                    </table>
+                                </div>
+                            `;
+
                             L.marker([lat, lon], {icon: iconoGenset})
-                             .bindPopup(`<b>${nombre}</b><br>Estado: ${estado}<br>Coordenadas: ${n}, ${e}`).addTo(capaGensets);
+                             .bindPopup(popupContent).addTo(capaGensets);
 
                             listaDiv.innerHTML += `
                                 <div class="list-item genset-item" onclick="viajarA(${lat}, ${lon})">
-                                    <div><strong>${nombre}</strong><br><span style="color:#2ecc71">${estado}</span></div>
-                                    <div style="font-size:1.2em">⚡</div>
+                                    <div>
+                                        <strong>${nombre}</strong><br>
+                                        <small>${lugar}</small>
+                                    </div>
+                                    <div style="font-size:1.2em; color:#8e44ad">⚡</div>
                                 </div>
                             `;
                         } catch(e) {}
