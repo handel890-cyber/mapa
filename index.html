@@ -7,34 +7,45 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* --- ESTILOS VISUALES --- */
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
-        #menu-toggle {
-            position: absolute; top: 10px; left: 10px; z-index: 1100;
-            background: #2c3e50; color: white; border: none; border-radius: 4px;
-            width: 40px; height: 40px; font-size: 1.5em; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-        }
+        #menu-toggle { position: absolute; top: 10px; left: 10px; z-index: 1100; background: #2c3e50; color: white; border: none; border-radius: 4px; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
         #panel { 
-            position: absolute; top: 60px; left: 10px; width: 260px; 
+            position: absolute; top: 60px; left: 10px; width: 270px; 
             background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
             border-radius: 8px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
             max-height: 85vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
             transform: translateX(0);
         }
-        #panel.escondido { transform: translateX(-350%); }
+        #panel.escondido { transform: translateX(-360%); }
 
         h4 { margin: 10px 0 5px 0; font-size: 0.8em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
         
-        button { width: 100%; padding: 12px; margin: 5px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.8em; transition: 0.2s; }
+        button { width: 100%; padding: 10px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
         button:active { transform: scale(0.98); }
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
 
-        /* ALERTA SILENCIO RADIAL (ABAJO) */
+        /* TABS PARA CAMBIAR ENTRE VOLADURA Y GENSETS */
+        .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
+        .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
+
+        /* LISTAS */
+        .list-item { 
+            background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 5px; 
+            border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey;
+            display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+        }
+        .list-item:hover { background: rgba(255,255,255,0.1); }
+        
+        /* Estilos específicos Genset */
+        .genset-item { border-left-color: #9b59b6; }
+        .genset-icon { background: #8e44ad; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 0 5px black; }
+
+        /* ALERTAS */
         #radio-silence-alert {
             position: absolute; bottom: 30px; left: 20px; right: 20px;
             background: rgba(231, 76, 60, 0.95); color: white;
@@ -42,70 +53,50 @@
             font-weight: 900; font-size: 1.2em; z-index: 2000;
             border: 4px solid white; display: none;
             box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
-            text-transform: uppercase;
-            animation: parpadeo-fuerte 0.8s infinite alternate;
+            text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate;
         }
         @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
 
-        #reloj-sistema { 
-            font-family: monospace; color: #f1c40f; text-align: center; 
-            font-size: 1.4em; margin-bottom: 10px; border: 1px solid #555; 
-            padding: 5px; border-radius: 4px; background: rgba(0,0,0,0.3);
-        }
-
-        .status-row { 
-            background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 6px; 
-            border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey;
-            display: flex; justify-content: space-between; align-items: center;
-        }
-
-        .storm-alert {
-            background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db;
-            color: #f1c40f; padding: 10px; margin-bottom: 10px; border-radius: 5px;
-            text-align: center; font-size: 0.8em; display: none; font-weight: bold;
-        }
-
-        .proximity-alert {
-            background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12;
-            color: #e67e22; padding: 10px; margin-bottom: 10px; border-radius: 5px;
-            text-align: center; font-size: 0.9em; display: none; font-weight: bold;
-            animation: parpadeo-suave 1s infinite alternate;
-        }
+        #reloj-sistema { font-family: monospace; color: #f1c40f; text-align: center; font-size: 1.2em; margin-bottom: 10px; border: 1px solid #555; padding: 5px; background: rgba(0,0,0,0.3); }
+        .storm-alert { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; color: #f1c40f; padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
+        .proximity-alert { background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12; color: #e67e22; padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.9em; display: none; font-weight: bold; border-radius: 5px; animation: parpadeo-suave 1s infinite alternate; }
         .proximity-critical { background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b; color: #ff6b6b; }
         @keyframes parpadeo-suave { from { opacity: 0.8; } to { opacity: 1; } }
 
         .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
-        .footer-dev b { color: #3498db; }
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
         .leaflet-control-layers { border-radius: 8px; padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
     </style>
 </head>
 <body>
 
-<div id="radio-silence-alert">
-    🚫 SILENCIO RADIAL ACTIVO 🚫<br>
-    <span style="font-size:0.6em; font-weight:normal;">ZONA ROJA ACTIVADA</span>
-</div>
+<div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫<br><span style="font-size:0.6em; font-weight:normal;">ZONA ROJA ACTIVADA</span></div>
 
 <button id="menu-toggle" onclick="togglePanel()">☰</button>
 
 <div id="panel">
     <div id="reloj-sistema">--:--:--</div>
-    
     <div id="storm-box" class="storm-alert"></div>
     <div id="proximity-box" class="proximity-alert"></div>
 
-    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 ACTIVAR MI GPS</button>
-    <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">Esperando señal...</div>
+    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 MI UBICACIÓN (GPS)</button>
+    <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">...</div>
 
-    <h4>📡 Voladuras de Hoy</h4>
-    
-    <button class="btn-sync" onclick="cargarDesdeGoogle()">🔄 ACTUALIZAR DE EXCEL</button>
-    
-    <div id="lista-voladuras" style="margin-top: 15px;">
-        <div style="text-align:center; color:#bdc3c7; font-size:0.8em; padding:20px;">
-            <i>Cargando datos...</i>
-        </div>
+    <div class="tab-container">
+        <button class="tab-btn active" onclick="cambiarTab('voladuras')" id="tab-vol">💥 Voladura</button>
+        <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
+    </div>
+
+    <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
+
+    <div id="view-voladuras">
+        <h4 style="color:#e74c3c">Programación Hoy</h4>
+        <div id="lista-voladuras"><em style="font-size:0.7em; color:#7f8c8d;">Cargando...</em></div>
+    </div>
+
+    <div id="view-gensets" style="display:none;">
+        <h4 style="color:#9b59b6">Generadores Activos</h4>
+        <div id="lista-gensets"><em style="font-size:0.7em; color:#7f8c8d;">Sin datos...</em></div>
     </div>
 
     <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
@@ -117,19 +108,31 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // 🔗 TU ENLACE GOOGLE SHEETS
-    var GOOGLE_CSV_LINK = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
+    // ======================================================
+    // 🔗 TUS ENLACES DE GOOGLE SHEETS
+    // ======================================================
+    var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
+    
+    // ⚠️ PEGA AQUÍ EL LINK DE TU NUEVA HOJA DE GENSETS
+    var LINK_GENSETS = "PEGAR_AQUI_TU_NUEVO_LINK_CSV_DE_GENSETS"; 
+    // ======================================================
 
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
+    
+    // Cambiar pestañas
+    function cambiarTab(tab) {
+        document.getElementById('view-voladuras').style.display = (tab === 'voladuras') ? 'block' : 'none';
+        document.getElementById('view-gensets').style.display = (tab === 'gensets') ? 'block' : 'none';
+        document.getElementById('tab-vol').className = (tab === 'voladuras') ? 'tab-btn active' : 'tab-btn';
+        document.getElementById('tab-gen').className = (tab === 'gensets') ? 'tab-btn active' : 'tab-btn';
+    }
 
-    // 1. RELOJ
+    // RELOJ
     setInterval(() => {
-        const ahora = new Date();
-        document.getElementById("reloj-sistema").innerText = 
-            ahora.toLocaleTimeString('es-PE', { hour12: false });
+        document.getElementById("reloj-sistema").innerText = new Date().toLocaleTimeString('es-PE', { hour12: false });
     }, 1000);
 
-    // 2. CONFIGURACIÓN DEL MAPA
+    // MAPA
     proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
     var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.08], 13);
 
@@ -140,17 +143,18 @@
     mapaSatelite.addTo(map);
     
     var capaVoladuras = L.layerGroup().addTo(map);
+    var capaGensets = L.layerGroup().addTo(map);
     var capaGPS = L.layerGroup().addTo(map);
     var capaTormentas = L.layerGroup().addTo(map);
     var lineaDistancia = L.layerGroup().addTo(map);
 
     L.control.layers(
         { "🌎 Satélite": mapaSatelite, "🗺️ Plano": mapaPlano, "⛰️ Topográfico": mapaTopo }, 
-        { "⚡ Sensores": capaTormentas, "💥 Voladuras": capaVoladuras }, 
+        { "⚡ Sensores": capaTormentas, "💥 Voladuras": capaVoladuras, "🟣 Gensets": capaGensets }, 
         { position: 'topright' }
     ).addTo(map);
 
-    // 3. SENSORES TORMENTA
+    // SENSORES TORMENTA
     const sensores = [
         { nombre: "MINA", lat: -11.61543, lon: -76.14331 },
         { nombre: "CARHUACOTO", lat: -11.58529, lon: -76.06169 },
@@ -162,22 +166,25 @@
         L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
     });
 
-    // 4. LÓGICA DE DATOS
+    // --- CARGA DE DATOS ---
     var zonasProgramadas = [];
-    var zonasActivasAhora = []; // Lista crítica para seguridad
+    var zonasActivasAhora = []; 
     var intervaloChequeo = null;
 
-    async function cargarDesdeGoogle() {
+    function actualizarTodo() {
+        cargarVoladuras();
+        cargarGensets();
+    }
+
+    // 1. CARGAR VOLADURAS (Tu lógica existente)
+    async function cargarVoladuras() {
         var btn = document.querySelector(".btn-sync");
-        btn.innerHTML = "⏳ CONECTANDO...";
-        
+        btn.innerHTML = "⏳ CARGANDO...";
         try {
-            const response = await fetch(GOOGLE_CSV_LINK + '&t=' + Date.now());
+            const response = await fetch(LINK_VOLADURAS + '&t=' + Date.now());
             const text = await response.text();
-            
             zonasProgramadas = [];
             const filas = text.split('\n');
-
             for (let i = 1; i < filas.length; i++) {
                 const col = filas[i].split(',');
                 if (col.length >= 6 && col[0].trim() !== "") {
@@ -187,22 +194,74 @@
                     });
                 }
             }
-            btn.innerHTML = "✅ SINCRONIZADO";
-            setTimeout(() => { btn.innerHTML = "🔄 ACTUALIZAR DE EXCEL"; }, 3000);
-
             if (intervaloChequeo) clearInterval(intervaloChequeo);
-            
-            // Ejecutamos inmediatamente y luego cada 1 segundo (MUY IMPORTANTE)
-            actualizarMapaSegunHora();
-            intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000); 
-
-        } catch (err) {
-            console.error(err);
-            alert("Error leyendo el Excel.");
-            btn.innerHTML = "❌ ERROR";
-        }
+            actualizarMapaSegunHora(); // Ejecuta una vez ya
+            intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000); // Loop de 1 seg para el reloj
+            btn.innerHTML = "✅ LISTO"; setTimeout(() => { btn.innerHTML = "🔄 ACTUALIZAR DATOS"; }, 3000);
+        } catch (err) { console.error(err); btn.innerHTML = "❌ ERROR VOL"; }
     }
 
+    // 2. CARGAR GENSETS (Nueva lógica)
+    async function cargarGensets() {
+        if (!LINK_GENSETS.startsWith("http")) return; // Si no has puesto el link, no hace nada
+        
+        try {
+            const response = await fetch(LINK_GENSETS + '&t=' + Date.now());
+            const text = await response.text();
+            const filas = text.split('\n');
+            
+            capaGensets.clearLayers();
+            const listaDiv = document.getElementById("lista-gensets");
+            listaDiv.innerHTML = "";
+
+            for (let i = 1; i < filas.length; i++) {
+                const col = filas[i].split(',');
+                if (col.length >= 4 && col[0].trim() !== "") {
+                    const n = parseFloat(col[0]);
+                    const e = parseFloat(col[1]);
+                    const nombre = col[2];
+                    const estado = col[3].trim().toUpperCase(); // "TRABAJANDO"
+
+                    // Solo si está trabajando y coordenadas válidas
+                    if (estado.includes("TRABAJANDO") && !isNaN(n)) {
+                        // Convertir a LatLng
+                        try {
+                            const c = proj4("EPSG:32718", "EPSG:4326", [e, n]);
+                            const lat = c[1]; const lon = c[0];
+
+                            // Marcador Mapa
+                            const iconoGenset = L.divIcon({
+                                className: '',
+                                html: `<div class="genset-icon">⚡</div>`,
+                                iconSize: [24, 24], iconAnchor: [12, 12]
+                            });
+                            L.marker([lat, lon], {icon: iconoGenset})
+                             .bindPopup(`<b>${nombre}</b><br>Estado: ${estado}`).addTo(capaGensets);
+
+                            // Item en la Lista (Click para viajar)
+                            listaDiv.innerHTML += `
+                                <div class="list-item genset-item" onclick="viajarA(${lat}, ${lon})">
+                                    <div><strong>${nombre}</strong><br><span style="color:#2ecc71">${estado}</span></div>
+                                    <div style="font-size:1.2em">🔭</div>
+                                </div>
+                            `;
+                        } catch(e) {}
+                    }
+                }
+            }
+            if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center;color:grey'>No hay gensets activos.</div>";
+
+        } catch (err) { console.error("Error Gensets", err); }
+    }
+
+    // Función auxiliar para el zoom
+    window.viajarA = function(lat, lon) {
+        map.flyTo([lat, lon], 18); // Zoom fuerte
+        // Si estamos en móvil, esconder panel al hacer click
+        if (window.innerWidth < 600) togglePanel();
+    };
+
+    // LÓGICA DE TIEMPO VOLADURA (Igual que antes)
     function actualizarMapaSegunHora() {
         const ahora = new Date();
         const listaDiv = document.getElementById("lista-voladuras");
@@ -212,60 +271,37 @@
         capaVoladuras.clearLayers(); 
         
         let haySilencioRadial = false;
-        
-        // REINICIAMOS LA LISTA DE PELIGRO CADA SEGUNDO
-        zonasActivasAhora = []; 
+        zonasActivasAhora = [];
 
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
-
             const [hh, mm] = zona.hora.split(':');
-            const fechaInicio = new Date();
-            fechaInicio.setHours(hh, mm, 0);
+            const fechaInicio = new Date(); fechaInicio.setHours(hh, mm, 0);
             const fechaFin = new Date(fechaInicio.getTime() + zona.dur * 60000);
 
-            let estadoTexto = "";
-            let colorBorde = "";
-            let colorMapa = "";
-            let dibujar = false;
-            let esPeligroso = false; // Flag para saber si agregarlo al GPS
+            let estadoTexto = ""; let colorBorde = ""; let colorMapa = ""; let dibujar = false; let esPeligroso = false;
 
             if (ahora > fechaFin) {
-                // YA FINALIZÓ: NO SE DIBUJA, NO ES PELIGROSO
-                estadoTexto = "FINALIZADO"; 
-                colorBorde = "#7f8c8d";
+                estadoTexto = "FINALIZADO"; colorBorde = "#7f8c8d";
             } else if (ahora >= fechaInicio && ahora <= fechaFin) {
-                // ACTIVO AHORA
-                estadoTexto = "🚨 EN EJECUCIÓN"; colorBorde = "#e74c3c";
-                colorMapa = "red"; dibujar = true; haySilencioRadial = true;
-                esPeligroso = true;
+                estadoTexto = "🚨 EN EJECUCIÓN"; colorBorde = "#e74c3c"; colorMapa = "red"; dibujar = true; haySilencioRadial = true; esPeligroso = true;
             } else {
-                // FUTURO
-                estadoTexto = "⏳ PROGRAMADO"; colorBorde = "#f39c12";
-                colorMapa = "orange"; dibujar = true;
-                esPeligroso = true; // Avisar también si me acerco a una programada
+                estadoTexto = "⏳ PROGRAMADO"; colorBorde = "#f39c12"; colorMapa = "orange"; dibujar = true; esPeligroso = true;
             }
 
-            // DIBUJAR EN EL MAPA
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
-                    
-                    // AQUÍ ESTÁ EL TRUCO: Solo agregamos a la lista de "Zonas Peligrosas" si NO ha finalizado
-                    if (esPeligroso) {
-                        zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
-                    }
-
+                    if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
-                    L.circle([c[1], c[0]], { radius: zona.r, color: colorHex, fillColor: colorHex, fillOpacity: opacidad, weight: 2 }).bindPopup(`<b>${zona.detalle}</b><br>Inicio: ${zona.hora}`).addTo(capaVoladuras);
+                    L.circle([c[1], c[0]], { radius: zona.r, color: colorHex, fillColor: colorHex, fillOpacity: opacidad, weight: 2 }).bindPopup(`<b>${zona.detalle}</b><br>${zona.hora}`).addTo(capaVoladuras);
                 } catch(e) {}
             }
 
-            // DIBUJAR EN LA LISTA DEL PANEL
             if (estadoTexto !== "FINALIZADO" || (ahora - fechaFin) < 7200000) {
                 listaDiv.innerHTML += `
-                    <div class="status-row" style="border-left-color: ${colorBorde};">
+                    <div class="list-item" style="border-left-color: ${colorBorde};">
                         <div><strong style="font-size:1.1em">${zona.detalle}</strong><br><span style="color:${colorBorde}; font-weight:bold;">${estadoTexto}</span></div>
                         <div style="text-align:right;">${zona.hora}<br><small>${zona.dur} min</small></div>
                     </div>`;
@@ -274,14 +310,11 @@
 
         alertaDiv.style.display = haySilencioRadial ? "block" : "none";
         if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
-
-        // IMPORTANTE: FORZAMOS EL CHEQUEO DE SEGURIDAD AUNQUE NO TE MUEVAS
-        if (miPosicion) {
-            chequearProximidadVoladura();
-        }
+        
+        if (miPosicion) chequearProximidadVoladura();
     }
 
-    // 5. GPS Y SEGURIDAD
+    // GPS 
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
     var miPosicion = null;
@@ -290,83 +323,54 @@
         var btn = document.getElementById("btnGps");
         if (!navigator.geolocation) { alert("Sin GPS"); return; }
         btn.innerHTML = "🔄 BUSCANDO..."; btn.style.backgroundColor = "#e67e22";
-
-        navigator.geolocation.watchPosition(
-            (pos) => {
-                var lat = pos.coords.latitude; var lon = pos.coords.longitude;
-                miPosicion = L.latLng(lat, lon);
-                try {
-                    var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
-                    document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
-                } catch(e) {}
-
-                btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
-
-                if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
-                else { marcadorVehiculo.setLatLng([lat, lon]); }
-
-                chequearTormentas();
-                chequearProximidadVoladura();
-            },
-            (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, 
-            { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
-        );
+        navigator.geolocation.watchPosition((pos) => {
+            var lat = pos.coords.latitude; var lon = pos.coords.longitude;
+            miPosicion = L.latLng(lat, lon);
+            try {
+                var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
+                document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
+            } catch(e) {}
+            btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
+            if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
+            else { marcadorVehiculo.setLatLng([lat, lon]); }
+            chequearTormentas(); chequearProximidadVoladura();
+        }, (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, { enableHighAccuracy: true });
     }
 
     function chequearProximidadVoladura() {
-        if (!miPosicion) return;
-        
+        if (!miPosicion || zonasActivasAhora.length === 0) { document.getElementById("proximity-box").style.display = "none"; return; }
         var box = document.getElementById("proximity-box");
-        var alertaActiva = false; 
-        var mensaje = ""; 
-        var claseCritica = false;
-        
-        lineaDistancia.clearLayers(); 
-
-        // Si no hay zonas activas ahora (lista vacía), ocultamos y salimos
-        if (zonasActivasAhora.length === 0) {
-            box.style.display = "none";
-            return;
-        }
-
-        const UMBRAL_ADVERTENCIA = 1000;
+        var alertaActiva = false; var mensaje = ""; var claseCritica = false;
+        lineaDistancia.clearLayers();
+        const UMBRAL = 1000;
 
         zonasActivasAhora.forEach(zona => {
             var distCentro = map.distance(miPosicion, zona.center);
             var distBorde = distCentro - zona.radius;
-
             if (distBorde <= 0) {
-                alertaActiva = true; claseCritica = true;
-                mensaje = `⛔ ¡PELIGRO!<br>ESTÁS DENTRO DE: ${zona.name}`;
+                alertaActiva = true; claseCritica = true; mensaje = `⛔ ¡PELIGRO!<br>ESTÁS DENTRO DE: ${zona.name}`;
                 L.polyline([miPosicion, zona.center], {color: 'red', weight: 4}).addTo(lineaDistancia);
-            } else if (distBorde <= UMBRAL_ADVERTENCIA) {
+            } else if (distBorde <= UMBRAL) {
                 if (!claseCritica) {
-                    alertaActiva = true;
-                    mensaje = `⚠️ PRECAUCIÓN<br>A ${distBorde.toFixed(0)}m de: ${zona.name}`;
+                    alertaActiva = true; mensaje = `⚠️ PRECAUCIÓN<br>A ${distBorde.toFixed(0)}m de: ${zona.name}`;
                     L.polyline([miPosicion, zona.center], {color: 'orange', dashArray: '5, 10'}).addTo(lineaDistancia);
                 }
             }
         });
-
-        if (alertaActiva) {
-            box.style.display = "block"; box.innerHTML = mensaje;
-            box.className = claseCritica ? "proximity-alert proximity-critical" : "proximity-alert";
-        } else { box.style.display = "none"; }
+        if (alertaActiva) { box.style.display = "block"; box.innerHTML = mensaje; box.className = claseCritica ? "proximity-alert proximity-critical" : "proximity-alert"; }
+        else { box.style.display = "none"; }
     }
 
     function chequearTormentas() {
         if (!miPosicion) return;
         var box = document.getElementById("storm-box");
         var detectados = [];
-        sensores.forEach(s => {
-            if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) detectados.push(s.nombre);
-        });
-        if (detectados.length > 0) {
-            box.style.display = "block"; box.innerHTML = `⚡ ESTAS EN SENSOR: <br>${detectados.join(" y ")}`;
-        } else { box.style.display = "none"; }
+        sensores.forEach(s => { if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) detectados.push(s.nombre); });
+        if (detectados.length > 0) { box.style.display = "block"; box.innerHTML = `⚡ EN SENSOR: <br>${detectados.join(" y ")}`; }
+        else { box.style.display = "none"; }
     }
 
-    window.onload = function() { cargarDesdeGoogle(); }
+    window.onload = function() { actualizarTodo(); }
 </script>
 </body>
 </html>
