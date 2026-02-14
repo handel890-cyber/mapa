@@ -164,13 +164,10 @@
 
     // Funciones del Reporte Flotante
     function abrirReporte() {
-        var frame = document.getElementById('frame-reporte');
-        if(frame.src === "" || frame.src === "about:blank") {
-            // Truco: widget=true limpia la interfaz de Google
-            frame.src = LINK_REPORTE_HTML + "&widget=true&headers=false";
-        }
-        document.getElementById('modal-reporte').style.display = "flex";
-    }
+    	// Abrir en una pestaña nueva para evitar el bloqueo de pantalla blanca
+    	window.open(LINK_REPORTE_HTML, '_blank');
+	}
+
     function cerrarReporte() {
         document.getElementById('modal-reporte').style.display = "none";
     }
@@ -283,7 +280,7 @@
                                         <tr><td>Estado:</td><td><b style="color:#27ae60">${estado}</b></td></tr>
                                         <tr><td>Lugar:</td><td>${lugar}</td></tr>
                                         <tr><td>Horas:</td><td>${horas} hrs</td></tr>
-                                        <tr><td>Tensión:</td><td>${tension}</td></tr>
+                                        <tr><td>Tensión:</td><td>${tension} V</td></tr>
                                         <tr><td>Coord:</td><td><small>${n}, ${e}</small></td></tr>
                                     </table>
                                 </div>`;
