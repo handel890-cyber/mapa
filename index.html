@@ -28,12 +28,10 @@
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
 
-        /* TABS */
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
         .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
 
-        /* LISTAS */
         .list-item { 
             background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 5px; 
             border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey;
@@ -41,9 +39,23 @@
         }
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
-        .genset-icon { background: #8e44ad; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 0 5px black; }
 
-        /* ALERTAS */
+        /* --- NUEVO ESTILO PARA EL ÍCONO DE GENSET --- */
+        .genset-marker {
+            background: #8e44ad; /* Morado */
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 0 5px black;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .genset-marker svg {
+            width: 18px; 
+            height: 18px; 
+            fill: white; /* Dibujo blanco */
+        }
+
         #radio-silence-alert {
             position: absolute; bottom: 30px; left: 20px; right: 20px;
             background: rgba(231, 76, 60, 0.95); color: white;
@@ -109,10 +121,7 @@
     // ======================================================
     // 🔗 TUS ENLACES DE GOOGLE SHEETS
     // ======================================================
-    // 1. HOJA VOLADURAS (gid=0)
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
-    
-    // 2. HOJA GENSETS (gid=2066463473) - ¡YA PUESTO!
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     // ======================================================
 
@@ -217,18 +226,20 @@
                             const c = proj4("EPSG:32718", "EPSG:4326", [e, n]);
                             const lat = c[1]; const lon = c[0];
 
+                            // --- NUEVO ÍCONO SVG ---
                             const iconoGenset = L.divIcon({
-                                className: '',
-                                html: `<div class="genset-icon">⚡</div>`,
-                                iconSize: [24, 24], iconAnchor: [12, 12]
+                                className: 'genset-marker',
+                                html: `<svg viewBox="0 0 24 24"><path d="M4 6h16v10H4z"/><path d="M6 8h12v6H6z" fill="#8e44ad"/><path d="M7 9h3v4H7zm4 0h3v4h-3zm4 0h3v4h-3z" fill="white"/><path d="M5 16v3h2v-3m10 0v3h2v-3" stroke="white" stroke-width="2"/></svg>`,
+                                iconSize: [28, 28], iconAnchor: [14, 14]
                             });
+
                             L.marker([lat, lon], {icon: iconoGenset})
-                             .bindPopup(`<b>${nombre}</b><br>Estado: ${estado}`).addTo(capaGensets);
+                             .bindPopup(`<b>${nombre}</b><br>Estado: ${estado}<br>Coordenadas: ${n}, ${e}`).addTo(capaGensets);
 
                             listaDiv.innerHTML += `
                                 <div class="list-item genset-item" onclick="viajarA(${lat}, ${lon})">
                                     <div><strong>${nombre}</strong><br><span style="color:#2ecc71">${estado}</span></div>
-                                    <div style="font-size:1.2em">🔭</div>
+                                    <div style="font-size:1.2em">⚡</div>
                                 </div>
                             `;
                         } catch(e) {}
