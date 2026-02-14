@@ -24,22 +24,20 @@
 
         h4 { margin: 10px 0 5px 0; font-size: 0.8em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
         
-        button { width: 100%; padding: 10px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
+        button { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
         button:active { transform: scale(0.98); }
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
         
-        /* BOTÓN DE REPORTE (DESTACADO) */
+        /* BOTÓN REPORTE */
         .btn-report { 
-            background: #d35400; /* Naranja oscuro */
-            color: white; 
-            border: 1px solid #e67e22;
-            margin-bottom: 15px; /* Espacio debajo */
+            background: #d35400; color: white; 
+            border: 1px solid #e67e22; margin-bottom: 15px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
 
         /* TABS */
-        .tab-container { display: flex; justify-content: space-between; margin-bottom: 5px; }
+        .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
         .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
 
@@ -101,7 +99,8 @@
     <div id="proximity-box" class="proximity-alert"></div>
 
     <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 MI UBICACIÓN (GPS)</button>
-    
+    <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">...</div>
+
     <div class="tab-container">
         <button class="tab-btn active" onclick="cambiarTab('voladuras')" id="tab-vol">💥 Voladura</button>
         <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
@@ -125,10 +124,10 @@
 </div>
 
 <div id="modal-reporte" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:white; width:90%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column;">
+    <div style="background:white; width:90%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
         <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
             <span style="font-weight:bold;">📋 REPORTE DE EQUIPOS</span>
-            <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer;">X</button>
+            <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px;">X</button>
         </div>
         <iframe id="frame-reporte" src="" style="width:100%; height:100%; border:none; background:#fff;"></iframe>
     </div>
@@ -149,7 +148,8 @@
     // 2. CSV GENSETS
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     
-    // 3. REPORTE HTML (Tu Link)
+    // 3. REPORTE HTML (Debe terminar en /pubhtml)
+    // ⚠️ Asegúrate de que este link sea el de "Publicar en la web" de tu cuenta personal
     var LINK_REPORTE_HTML = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pubhtml?gid=528288056&single=true";
     // ======================================================
 
@@ -162,11 +162,19 @@
         document.getElementById('tab-gen').className = (tab === 'gensets') ? 'tab-btn active' : 'tab-btn';
     }
 
-    // Funciones del Reporte Flotante
+    // --- FUNCIÓN DEL POP-UP (MODAL) ---
     function abrirReporte() {
-    	// Abrir en una pestaña nueva para evitar el bloqueo de pantalla blanca
-    	window.open(LINK_REPORTE_HTML, '_blank');
-	}
+        var modal = document.getElementById('modal-reporte');
+        var frame = document.getElementById('frame-reporte');
+        
+        // Cargamos el link solo la primera vez para ahorrar datos
+        if(frame.src === "" || frame.src === "about:blank") {
+            // Añadimos parámetros para limpiar la vista de Google Sheets
+            frame.src = LINK_REPORTE_HTML + "&widget=true&headers=false&chrome=false"; 
+        }
+        
+        modal.style.display = "flex";
+    }
 
     function cerrarReporte() {
         document.getElementById('modal-reporte').style.display = "none";
@@ -280,7 +288,7 @@
                                         <tr><td>Estado:</td><td><b style="color:#27ae60">${estado}</b></td></tr>
                                         <tr><td>Lugar:</td><td>${lugar}</td></tr>
                                         <tr><td>Horas:</td><td>${horas} hrs</td></tr>
-                                        <tr><td>Tensión:</td><td>${tension} V</td></tr>
+                                        <tr><td>Tensión:</td><td>${tension}</td></tr>
                                         <tr><td>Coord:</td><td><small>${n}, ${e}</small></td></tr>
                                     </table>
                                 </div>`;
