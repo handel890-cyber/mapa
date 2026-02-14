@@ -14,7 +14,7 @@
         #menu-toggle { position: absolute; top: 10px; left: 10px; z-index: 1100; background: #2c3e50; color: white; border: none; border-radius: 4px; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
 
         #panel { 
-            position: absolute; top: 60px; left: 10px; width: 270px; 
+            position: absolute; top: 60px; left: 10px; width: 280px; 
             background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
             border-radius: 8px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
             max-height: 85vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
@@ -24,10 +24,11 @@
 
         h4 { margin: 10px 0 5px 0; font-size: 0.8em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
         
-        button { width: 100%; padding: 10px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
+        button { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
         button:active { transform: scale(0.98); }
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
+        .btn-report { background: #e67e22; color: white; margin-top: 15px; } /* Botón Naranja */
 
         /* TABS */
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
@@ -43,7 +44,7 @@
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
 
-        /* ÍCONO GENSET MEJORADO (SVG) */
+        /* ÍCONO GENSET SVG */
         .genset-marker {
             background: #8e44ad;
             border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black;
@@ -51,10 +52,10 @@
         }
         .genset-marker svg { width: 18px; height: 18px; fill: white; }
 
-        /* ESTILO DEL POPUP (LA TABLA DE DATOS) */
+        /* POPUP TABLA */
         .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
         .tabla-info { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.9em; }
-        .tabla-info td { padding: 2px 5px; border-bottom: 1px solid #eee; }
+        .tabla-info td { padding: 3px 5px; border-bottom: 1px solid #eee; }
         .tabla-info td:first-child { font-weight: bold; color: #555; }
 
         /* ALERTAS */
@@ -100,6 +101,8 @@
     </div>
 
     <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
+    
+    <button class="btn-report" onclick="abrirReporte()">📄 VER REPORTE TÉCNICO</button>
 
     <div id="view-voladuras">
         <h4 style="color:#e74c3c">Programación Hoy</h4>
@@ -114,6 +117,16 @@
     <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
 </div>
 
+<div id="modal-reporte" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; width:90%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column;">
+        <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:bold;">📋 REPORTE DE EQUIPOS</span>
+            <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer;">X</button>
+        </div>
+        <iframe id="frame-reporte" src="" style="width:100%; height:100%; border:none; background:#fff;"></iframe>
+    </div>
+</div>
+
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -121,12 +134,17 @@
 
 <script>
     // ======================================================
-    // 🔗 TUS ENLACES DE GOOGLE SHEETS
+    // 🔗 CONFIGURACIÓN DE ENLACES
     // ======================================================
+    // 1. CSV VOLADURAS
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     
-    // Enlace GENSETS (el que me pasaste antes)
+    // 2. CSV GENSETS (Datos para el mapa)
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
+    
+    // 3. REPORTE HTML (Si tienes una hoja bonita para imprimir)
+    // * Si no tienes, déjalo vacío o pon el link de Gensets pero termina en /pubhtml
+    var LINK_REPORTE_HTML = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pubhtml?gid=2066463473&single=true";
     // ======================================================
 
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
@@ -136,6 +154,19 @@
         document.getElementById('view-gensets').style.display = (tab === 'gensets') ? 'block' : 'none';
         document.getElementById('tab-vol').className = (tab === 'voladuras') ? 'tab-btn active' : 'tab-btn';
         document.getElementById('tab-gen').className = (tab === 'gensets') ? 'tab-btn active' : 'tab-btn';
+    }
+
+    // Funciones del Reporte Flotante
+    function abrirReporte() {
+        var frame = document.getElementById('frame-reporte');
+        if(frame.src === "" || frame.src === "about:blank") {
+            // Truco: widget=true limpia la interfaz de Google
+            frame.src = LINK_REPORTE_HTML + "&widget=true&headers=false";
+        }
+        document.getElementById('modal-reporte').style.display = "flex";
+    }
+    function cerrarReporte() {
+        document.getElementById('modal-reporte').style.display = "none";
     }
 
     setInterval(() => {
@@ -183,7 +214,6 @@
         cargarGensets();
     }
 
-    // 1. CARGAR VOLADURAS
     async function cargarVoladuras() {
         var btn = document.querySelector(".btn-sync");
         btn.innerHTML = "⏳ CARGANDO...";
@@ -208,29 +238,23 @@
         } catch (err) { console.error(err); btn.innerHTML = "❌ ERROR VOL"; }
     }
 
-    // 2. CARGAR GENSETS (ACTUALIZADO CON MÁS DATOS)
     async function cargarGensets() {
         if (!LINK_GENSETS.startsWith("http")) return; 
-        
         try {
             const response = await fetch(LINK_GENSETS + '&t=' + Date.now());
             const text = await response.text();
             const filas = text.split('\n');
-            
             capaGensets.clearLayers();
             const listaDiv = document.getElementById("lista-gensets");
             listaDiv.innerHTML = "";
 
             for (let i = 1; i < filas.length; i++) {
                 const col = filas[i].split(',');
-                // Verificamos que tenga suficientes columnas (A a G son 7 columnas)
                 if (col.length >= 4 && col[0].trim() !== "") {
                     const n = parseFloat(col[0]);
                     const e = parseFloat(col[1]);
                     const nombre = col[2];
                     const estado = col[3] ? col[3].trim().toUpperCase() : "";
-                    
-                    // NUEVOS DATOS (Columnas E, F, G -> Índices 4, 5, 6)
                     const lugar = col[4] || "Sin datos";
                     const horas = col[5] || "-";
                     const tension = col[6] || "-";
@@ -240,14 +264,12 @@
                             const c = proj4("EPSG:32718", "EPSG:4326", [e, n]);
                             const lat = c[1]; const lon = c[0];
 
-                            // ÍCONO GENERADOR
                             const iconoGenset = L.divIcon({
                                 className: 'genset-marker',
                                 html: `<svg viewBox="0 0 24 24"><path d="M4 6h16v10H4z"/><path d="M6 8h12v6H6z" fill="#8e44ad"/><path d="M7 9h3v4H7zm4 0h3v4h-3zm4 0h3v4h-3z" fill="white"/><path d="M5 16v3h2v-3m10 0v3h2v-3" stroke="white" stroke-width="2"/></svg>`,
                                 iconSize: [28, 28], iconAnchor: [14, 14]
                             });
 
-                            // CONTENIDO DEL POPUP CON TABLA
                             const popupContent = `
                                 <div style="min-width:180px;">
                                     <h3 style="margin:0; color:#8e44ad; border-bottom:1px solid #ccc;">${nombre}</h3>
@@ -258,27 +280,20 @@
                                         <tr><td>Tensión:</td><td>${tension}</td></tr>
                                         <tr><td>Coord:</td><td><small>${n}, ${e}</small></td></tr>
                                     </table>
-                                </div>
-                            `;
+                                </div>`;
 
-                            L.marker([lat, lon], {icon: iconoGenset})
-                             .bindPopup(popupContent).addTo(capaGensets);
+                            L.marker([lat, lon], {icon: iconoGenset}).bindPopup(popupContent).addTo(capaGensets);
 
                             listaDiv.innerHTML += `
                                 <div class="list-item genset-item" onclick="viajarA(${lat}, ${lon})">
-                                    <div>
-                                        <strong>${nombre}</strong><br>
-                                        <small>${lugar}</small>
-                                    </div>
+                                    <div><strong>${nombre}</strong><br><small>${lugar}</small></div>
                                     <div style="font-size:1.2em; color:#8e44ad">⚡</div>
-                                </div>
-                            `;
+                                </div>`;
                         } catch(e) {}
                     }
                 }
             }
             if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center;color:grey'>No hay gensets activos.</div>";
-
         } catch (err) { console.error("Error Gensets", err); }
     }
 
@@ -291,19 +306,14 @@
         const ahora = new Date();
         const listaDiv = document.getElementById("lista-voladuras");
         const alertaDiv = document.getElementById("radio-silence-alert");
-        
-        listaDiv.innerHTML = ""; 
-        capaVoladuras.clearLayers(); 
-        
-        let haySilencioRadial = false;
-        zonasActivasAhora = [];
+        listaDiv.innerHTML = ""; capaVoladuras.clearLayers(); 
+        let haySilencioRadial = false; zonasActivasAhora = [];
 
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
             const [hh, mm] = zona.hora.split(':');
             const fechaInicio = new Date(); fechaInicio.setHours(hh, mm, 0);
             const fechaFin = new Date(fechaInicio.getTime() + zona.dur * 60000);
-
             let estadoTexto = ""; let colorBorde = ""; let colorMapa = ""; let dibujar = false; let esPeligroso = false;
 
             if (ahora > fechaFin) {
@@ -335,7 +345,6 @@
 
         alertaDiv.style.display = haySilencioRadial ? "block" : "none";
         if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
-        
         if (miPosicion) chequearProximidadVoladura();
     }
 
