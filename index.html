@@ -28,7 +28,7 @@
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
 
-        /* TABS PARA CAMBIAR ENTRE VOLADURA Y GENSETS */
+        /* TABS */
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
         .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
@@ -40,8 +40,6 @@
             display: flex; justify-content: space-between; align-items: center; cursor: pointer;
         }
         .list-item:hover { background: rgba(255,255,255,0.1); }
-        
-        /* Estilos específicos Genset */
         .genset-item { border-left-color: #9b59b6; }
         .genset-icon { background: #8e44ad; color: white; border-radius: 50%; width: 24px; height: 24px; text-align: center; line-height: 24px; font-weight: bold; font-size: 12px; border: 2px solid white; box-shadow: 0 0 5px black; }
 
@@ -111,15 +109,15 @@
     // ======================================================
     // 🔗 TUS ENLACES DE GOOGLE SHEETS
     // ======================================================
+    // 1. HOJA VOLADURAS (gid=0)
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     
-    // ⚠️ PEGA AQUÍ EL LINK DE TU NUEVA HOJA DE GENSETS
+    // 2. HOJA GENSETS (gid=2066463473) - ¡YA PUESTO!
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     // ======================================================
 
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
     
-    // Cambiar pestañas
     function cambiarTab(tab) {
         document.getElementById('view-voladuras').style.display = (tab === 'voladuras') ? 'block' : 'none';
         document.getElementById('view-gensets').style.display = (tab === 'gensets') ? 'block' : 'none';
@@ -127,12 +125,10 @@
         document.getElementById('tab-gen').className = (tab === 'gensets') ? 'tab-btn active' : 'tab-btn';
     }
 
-    // RELOJ
     setInterval(() => {
         document.getElementById("reloj-sistema").innerText = new Date().toLocaleTimeString('es-PE', { hour12: false });
     }, 1000);
 
-    // MAPA
     proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
     var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.08], 13);
 
@@ -154,7 +150,6 @@
         { position: 'topright' }
     ).addTo(map);
 
-    // SENSORES TORMENTA
     const sensores = [
         { nombre: "MINA", lat: -11.61543, lon: -76.14331 },
         { nombre: "CARHUACOTO", lat: -11.58529, lon: -76.06169 },
@@ -166,7 +161,6 @@
         L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas);
     });
 
-    // --- CARGA DE DATOS ---
     var zonasProgramadas = [];
     var zonasActivasAhora = []; 
     var intervaloChequeo = null;
@@ -176,7 +170,6 @@
         cargarGensets();
     }
 
-    // 1. CARGAR VOLADURAS (Tu lógica existente)
     async function cargarVoladuras() {
         var btn = document.querySelector(".btn-sync");
         btn.innerHTML = "⏳ CARGANDO...";
@@ -195,16 +188,13 @@
                 }
             }
             if (intervaloChequeo) clearInterval(intervaloChequeo);
-            actualizarMapaSegunHora(); // Ejecuta una vez ya
-            intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000); // Loop de 1 seg para el reloj
+            actualizarMapaSegunHora();
+            intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000);
             btn.innerHTML = "✅ LISTO"; setTimeout(() => { btn.innerHTML = "🔄 ACTUALIZAR DATOS"; }, 3000);
         } catch (err) { console.error(err); btn.innerHTML = "❌ ERROR VOL"; }
     }
 
-    // 2. CARGAR GENSETS (Nueva lógica)
     async function cargarGensets() {
-        if (!LINK_GENSETS.startsWith("http")) return; // Si no has puesto el link, no hace nada
-        
         try {
             const response = await fetch(LINK_GENSETS + '&t=' + Date.now());
             const text = await response.text();
@@ -220,16 +210,13 @@
                     const n = parseFloat(col[0]);
                     const e = parseFloat(col[1]);
                     const nombre = col[2];
-                    const estado = col[3].trim().toUpperCase(); // "TRABAJANDO"
+                    const estado = col[3] ? col[3].trim().toUpperCase() : "";
 
-                    // Solo si está trabajando y coordenadas válidas
                     if (estado.includes("TRABAJANDO") && !isNaN(n)) {
-                        // Convertir a LatLng
                         try {
                             const c = proj4("EPSG:32718", "EPSG:4326", [e, n]);
                             const lat = c[1]; const lon = c[0];
 
-                            // Marcador Mapa
                             const iconoGenset = L.divIcon({
                                 className: '',
                                 html: `<div class="genset-icon">⚡</div>`,
@@ -238,7 +225,6 @@
                             L.marker([lat, lon], {icon: iconoGenset})
                              .bindPopup(`<b>${nombre}</b><br>Estado: ${estado}`).addTo(capaGensets);
 
-                            // Item en la Lista (Click para viajar)
                             listaDiv.innerHTML += `
                                 <div class="list-item genset-item" onclick="viajarA(${lat}, ${lon})">
                                     <div><strong>${nombre}</strong><br><span style="color:#2ecc71">${estado}</span></div>
@@ -254,14 +240,11 @@
         } catch (err) { console.error("Error Gensets", err); }
     }
 
-    // Función auxiliar para el zoom
     window.viajarA = function(lat, lon) {
-        map.flyTo([lat, lon], 18); // Zoom fuerte
-        // Si estamos en móvil, esconder panel al hacer click
+        map.flyTo([lat, lon], 18);
         if (window.innerWidth < 600) togglePanel();
     };
 
-    // LÓGICA DE TIEMPO VOLADURA (Igual que antes)
     function actualizarMapaSegunHora() {
         const ahora = new Date();
         const listaDiv = document.getElementById("lista-voladuras");
@@ -314,7 +297,6 @@
         if (miPosicion) chequearProximidadVoladura();
     }
 
-    // GPS 
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
     var miPosicion = null;
