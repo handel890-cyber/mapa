@@ -7,7 +7,7 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* ESTILOS GENERALES */
+        /* --- ESTILOS GENERALES --- */
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
@@ -49,33 +49,18 @@
         }
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
-
+        
         /* ÍCONO GENSET SVG */
         .genset-marker {
-            background: #8e44ad;
-            border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black;
+            background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black;
             display: flex; align-items: center; justify-content: center;
         }
         .genset-marker svg { width: 18px; height: 18px; fill: white; }
 
-        /* POPUP TABLA */
-        .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
-        .tabla-info { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.9em; }
-        .tabla-info td { padding: 3px 5px; border-bottom: 1px solid #eee; }
-        .tabla-info td:first-child { font-weight: bold; color: #555; }
-
         /* ALERTAS */
-        #radio-silence-alert {
-            position: absolute; bottom: 30px; left: 20px; right: 20px;
-            background: rgba(231, 76, 60, 0.95); color: white;
-            padding: 15px; border-radius: 8px; text-align: center;
-            font-weight: 900; font-size: 1.2em; z-index: 2000;
-            border: 4px solid white; display: none;
-            box-shadow: 0 0 30px rgba(255, 0, 0, 0.8);
-            text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate;
-        }
+        #radio-silence-alert { position: absolute; bottom: 30px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate; }
         @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
-
+        
         #reloj-sistema { font-family: monospace; color: #f1c40f; text-align: center; font-size: 1.2em; margin-bottom: 10px; border: 1px solid #555; padding: 5px; background: rgba(0,0,0,0.3); }
         .storm-alert { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; color: #f1c40f; padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
         .proximity-alert { background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12; color: #e67e22; padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.9em; display: none; font-weight: bold; border-radius: 5px; animation: parpadeo-suave 1s infinite alternate; }
@@ -85,6 +70,13 @@
         .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
         .leaflet-control-layers { border-radius: 8px; padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
+        /* --- ESTILOS DE LA TABLA NATIVA --- */
+        #tabla-dinamica { width: 100%; border-collapse: collapse; font-size: 0.85em; color: #333; }
+        #tabla-dinamica th { background: #2c3e50; color: white; padding: 10px; text-align: left; position: sticky; top: 0; }
+        #tabla-dinamica td { padding: 8px; border-bottom: 1px solid #ddd; }
+        #tabla-dinamica tr:nth-child(even) { background-color: #f2f2f2; }
+        #tabla-dinamica tr:hover { background-color: #e8f6f3; }
     </style>
 </head>
 <body>
@@ -106,7 +98,7 @@
         <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
     </div>
 
-    <button class="btn-report" onclick="abrirReporte()">📄 VER REPORTE TÉCNICO</button>
+    <button class="btn-report" onclick="cargarReporteNativo()">📄 VER REPORTE TÉCNICO</button>
 
     <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
 
@@ -123,6 +115,18 @@
     <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
 </div>
 
+<div id="modal-reporte" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; width:95%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+        <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:bold;">📋 REPORTE DE EQUIPOS</span>
+            <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px;">X</button>
+        </div>
+        <div id="contenedor-tabla" style="overflow:auto; padding:0; height:100%; background:white;">
+            <div style="padding:20px; text-align:center; color:grey;">Cargando datos...</div>
+        </div>
+    </div>
+</div>
+
 <div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -134,11 +138,11 @@
     // ======================================================
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     
-    // Tu CSV de Gensets (Datos de ubicación)
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     
-    // Tu REPORTE HTML (Este es el que te daba pantalla blanca)
-    var LINK_REPORTE_HTML = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pubhtml?gid=528288056&single=true";
+    // ⚠️ CAMBIA ESTO POR TU ENLACE CSV DEL REPORTE (NO HTML)
+    // Debe terminar en &output=csv
+    var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
     // ======================================================
 
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
@@ -150,22 +154,46 @@
         document.getElementById('tab-gen').className = (tab === 'gensets') ? 'tab-btn active' : 'tab-btn';
     }
 
-    // --- NUEVA LÓGICA DE REPORTE (SOLUCIÓN PANTALLA BLANCA) ---
-    function abrirReporte() {
-        // En lugar de usar un iframe interno que Google bloquea,
-        // abrimos una VENTANA FLOTANTE ("Pop-up real") del navegador.
-        // Esto salta la seguridad y muestra el reporte al 100%.
+    // --- NUEVA FUNCIÓN: CARGAR REPORTE NATIVO (SIN IFRAME) ---
+    async function cargarReporteNativo() {
+        var modal = document.getElementById('modal-reporte');
+        var contenedor = document.getElementById('contenedor-tabla');
         
-        var ancho = 500;
-        var alto = 700;
-        var left = (window.innerWidth / 2) - (ancho / 2);
-        var top = (window.innerHeight / 2) - (alto / 2);
-        
-        window.open(
-            LINK_REPORTE_HTML, 
-            'ReporteGensets', 
-            `width=${ancho},height=${alto},top=${top},left=${left},scrollbars=yes,resizable=yes`
-        );
+        modal.style.display = "flex";
+        contenedor.innerHTML = '<div style="padding:20px; text-align:center; color:grey;">⏳ Descargando datos...</div>';
+
+        try {
+            const response = await fetch(LINK_REPORTE_CSV + '&t=' + Date.now());
+            const text = await response.text();
+            const filas = text.split('\n');
+
+            let htmlTabla = '<table id="tabla-dinamica">';
+            
+            // Recorremos las filas del CSV
+            for (let i = 0; i < filas.length; i++) {
+                if(filas[i].trim() === "") continue;
+                
+                var celdas = filas[i].split(','); // Ojo: Si tus datos tienen comas, esto es simple
+                
+                htmlTabla += '<tr>';
+                for (let j = 0; j < celdas.length; j++) {
+                    // Si es la primera fila (0), usamos TH, si no TD
+                    var tag = (i === 0) ? 'th' : 'td';
+                    htmlTabla += `<${tag}>${celdas[j]}</${tag}>`;
+                }
+                htmlTabla += '</tr>';
+            }
+            htmlTabla += '</table>';
+            
+            contenedor.innerHTML = htmlTabla;
+
+        } catch (error) {
+            contenedor.innerHTML = '<div style="padding:20px; text-align:center; color:red;">❌ Error al cargar reporte.<br>Revisa el enlace CSV.</div>';
+        }
+    }
+
+    function cerrarReporte() {
+        document.getElementById('modal-reporte').style.display = "none";
     }
 
     setInterval(() => {
