@@ -24,14 +24,22 @@
 
         h4 { margin: 10px 0 5px 0; font-size: 0.8em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
         
-        button { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
+        button { width: 100%; padding: 10px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
         button:active { transform: scale(0.98); }
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
-        .btn-report { background: #e67e22; color: white; margin-top: 15px; } /* Botón Naranja */
+        
+        /* BOTÓN DE REPORTE (DESTACADO) */
+        .btn-report { 
+            background: #d35400; /* Naranja oscuro */
+            color: white; 
+            border: 1px solid #e67e22;
+            margin-bottom: 15px; /* Espacio debajo */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
 
         /* TABS */
-        .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
+        .tab-container { display: flex; justify-content: space-between; margin-bottom: 5px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
         .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
 
@@ -93,16 +101,15 @@
     <div id="proximity-box" class="proximity-alert"></div>
 
     <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 MI UBICACIÓN (GPS)</button>
-    <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">...</div>
-
+    
     <div class="tab-container">
         <button class="tab-btn active" onclick="cambiarTab('voladuras')" id="tab-vol">💥 Voladura</button>
         <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
     </div>
 
-    <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
-    
     <button class="btn-report" onclick="abrirReporte()">📄 VER REPORTE TÉCNICO</button>
+
+    <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
 
     <div id="view-voladuras">
         <h4 style="color:#e74c3c">Programación Hoy</h4>
@@ -139,12 +146,11 @@
     // 1. CSV VOLADURAS
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     
-    // 2. CSV GENSETS (Datos para el mapa)
+    // 2. CSV GENSETS
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     
-    // 3. REPORTE HTML (Si tienes una hoja bonita para imprimir)
-    // * Si no tienes, déjalo vacío o pon el link de Gensets pero termina en /pubhtml
-    var LINK_REPORTE_HTML = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pubhtml?gid=2066463473&single=true";
+    // 3. REPORTE HTML (Tu Link)
+    var LINK_REPORTE_HTML = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pubhtml?gid=528288056&single=true";
     // ======================================================
 
     function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
