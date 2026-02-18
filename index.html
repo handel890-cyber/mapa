@@ -29,19 +29,14 @@
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
         
-        /* BOTÓN REPORTE */
-        .btn-report { 
-            background: #d35400; color: white; 
-            border: 1px solid #e67e22; margin-bottom: 15px; 
-            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-        }
+        /* BOTONES DE REPORTE */
+        .btn-report { background: #d35400; color: white; border: 1px solid #e67e22; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .btn-alert { background: #c0392b; color: white; border: 1px solid #e74c3c; margin-bottom: 10px; animation: parpadeo-suave 1s infinite alternate; display: none; }
 
-        /* TABS */
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
         .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
 
-        /* LISTAS */
         .list-item { 
             background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 5px; 
             border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey;
@@ -50,20 +45,17 @@
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
 
-        /* ÍCONO GENSET SVG */
         .genset-marker {
             background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black;
             display: flex; align-items: center; justify-content: center;
         }
         .genset-marker svg { width: 18px; height: 18px; fill: white; }
 
-        /* POPUP TABLA */
         .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
         .tabla-info { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.9em; }
         .tabla-info td { padding: 3px 5px; border-bottom: 1px solid #eee; }
         .tabla-info td:first-child { font-weight: bold; color: #555; }
 
-        /* ALERTAS */
         #radio-silence-alert { position: absolute; bottom: 30px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate; }
         @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
         
@@ -77,11 +69,12 @@
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
         .leaflet-control-layers { border-radius: 8px; padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
 
-        /* TABLA DINÁMICA ESTILOS */
         #tabla-dinamica { width: 100%; border-collapse: collapse; font-size: 0.85em; color: #333; }
         #tabla-dinamica th { background: #2c3e50; color: white; padding: 10px; text-align: left; position: sticky; top: 0; }
         #tabla-dinamica td { padding: 8px; border-bottom: 1px solid #ddd; }
         #tabla-dinamica tr:nth-child(even) { background-color: #f2f2f2; }
+        
+        #btn-permiso { background: #16a085; font-size:0.7em; margin-bottom:10px; display:none; }
     </style>
 </head>
 <body>
@@ -92,6 +85,8 @@
 
 <div id="panel">
     <div id="reloj-sistema">--:--:--</div>
+    <button id="btn-permiso" onclick="pedirPermisoNotificaciones()">🔔 ACTIVAR ALERTAS</button>
+
     <div id="storm-box" class="storm-alert"></div>
     <div id="proximity-box" class="proximity-alert"></div>
 
@@ -103,16 +98,17 @@
         <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
     </div>
 
-    <button id="btn-reporte" class="btn-report" style="display:none;" onclick="cargarReporteNativo()">📄 VER REPORTE TÉCNICO</button>
-
     <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
 
     <div id="view-voladuras">
+        <button id="btn-interferencia" class="btn-alert" onclick="mostrarTablaInterferencias()">⚠️ VER POSTES AFECTADOS</button>
+        
         <h4 style="color:#e74c3c">Programación Hoy</h4>
         <div id="lista-voladuras"><em style="font-size:0.7em; color:#7f8c8d;">Cargando...</em></div>
     </div>
 
     <div id="view-gensets" style="display:none;">
+        <button id="btn-reporte" class="btn-report" onclick="cargarReporteNativo()">📄 VER REPORTE TÉCNICO</button>
         <h4 style="color:#9b59b6">Generadores Activos</h4>
         <div id="lista-gensets"><em style="font-size:0.7em; color:#7f8c8d;">Sin datos...</em></div>
     </div>
@@ -123,11 +119,11 @@
 <div id="modal-reporte" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
     <div style="background:white; width:95%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
         <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-            <span style="font-weight:bold;">📋 REPORTE DE EQUIPOS</span>
+            <span id="modal-titulo" style="font-weight:bold;">📋 REPORTE</span>
             <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px;">X</button>
         </div>
         <div id="contenedor-tabla" style="overflow:auto; padding:0; height:100%; background:white;">
-            <div style="padding:20px; text-align:center; color:grey;">Cargando datos...</div>
+            <div style="padding:20px; text-align:center; color:grey;">Cargando...</div>
         </div>
     </div>
 </div>
@@ -138,143 +134,71 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // ======================================================
-    // 🔗 CONFIGURACIÓN DE ENLACES
-    // ======================================================
+    // 🔗 ENLACES DE DATOS
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
-    // ======================================================
 
-    // --- DATA INTEGRADA: LÍNEAS ELÉCTRICAS Y POSTES ---
-    // (Pegado directamente del GeoJSON que proporcionaste)
+    // --- DATA: LÍNEAS ELÉCTRICAS ---
     var datosEnergia = {
       "type": "FeatureCollection",
       "features": [
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14465922206212, -11.62011178650611, 0 ] }, "properties": { "name": "P4:R1-DT", "styleUrl": "#msn_placemark_circle02" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14428380962211, -11.62026698905186, 0 ] }, "properties": { "name": "P3:R1-DT", "styleUrl": "#msn_placemark_circle02" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1433040590863, -11.62066871973589, 0 ] }, "properties": { "name": "P2A:R1-DT", "styleUrl": "#msn_placemark_circle02" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14262653066154, -11.62096074687278, 0 ] }, "properties": { "name": "P2:R1-DT", "styleUrl": "#msn_placemark_circle02" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14232426863526, -11.6210614055265, 0 ] }, "properties": { "name": "P1: A3", "styleUrl": "#msn_placemark_circle" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14469550281946, -11.62001218101279, 0 ] }, "properties": { "name": "P1:THREE WAY-R1", "styleUrl": "#msn_donut0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14467656883163, -11.61986758479612, 0 ] }, "properties": { "name": "P2:R1", "styleUrl": "#msn_donut0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1446477249793, -11.61954218871163, 0 ] }, "properties": { "name": "P3:S2", "styleUrl": "#msn_donut0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14455202239223, -11.61856603674119, 0 ] }, "properties": { "name": "P4:R1", "styleUrl": "#msn_donut0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14479026382091, -11.61851083985542, 0 ] }, "properties": { "name": "P cable desconectado", "styleUrl": "#msn_donut" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14544093368166, -11.61838167018113, 0 ] }, "properties": { "name": "P", "styleUrl": "#msn_donut" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14457621606408, -11.61775216436268, 0 ] }, "properties": { "name": "P5 Secc: A3", "styleUrl": "#msn_donut0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14467723325002, -11.62003033741706, 0 ] }, "properties": { "name": "110 DS 008", "styleUrl": "#msn_track" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14465967833841, -11.620110047178, 0 ], [ -76.14468927369262, -11.6200094440963, 0 ], [ -76.14467412511539, -11.61986020429342, 0 ], [ -76.14464149422271, -11.61953591251048, 0 ], [ -76.14455019660471, -11.61855546116685, 0 ], [ -76.14457664261761, -11.61774999429316, 0 ] ] }, "properties": { "name": "Drv. Antiguo Truck Shop", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232346476558, -11.62105793403807, 0 ], [ -76.14262829939479, -11.62095693847417, 0 ], [ -76.1433048131181, -11.6206644638621, 0 ], [ -76.14428220026711, -11.62026397178024, 0 ], [ -76.14465905620234, -11.62010643452295, 0 ] ] }, "properties": { "name": "Anillo Mina C1", "stroke": "#55ffff" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1423241212759, -11.62102523825032, 0 ] }, "properties": { "name": "P1:A3", "styleUrl": "#msn_placemark_circle0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14262605162297, -11.62084320323646, 0 ] }, "properties": { "name": "P2:R1", "styleUrl": "#msn_placemark_circle0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14294625128935, -11.62064301163397, 0 ] }, "properties": { "name": "P3:S0", "styleUrl": "#msn_placemark_circle0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14347651493917, -11.62022498009887, 0 ] }, "properties": { "name": "P4:A1", "styleUrl": "#msn_placemark_circle0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14348295800886, -11.61955584935576, 0 ] }, "properties": { "name": "P5:A2", "styleUrl": "#msn_placemark_circle0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14241782658176, -11.61926168397149, 0 ] }, "properties": { "name": "T6:S0-3C", "styleUrl": "#msn_placemark_circle0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14117817766157, -11.61890491095095, 0 ] }, "properties": { "name": "T7:S0-3C", "styleUrl": "#msn_placemark_circle0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14017864903327, -11.61895407232934, 0 ] }, "properties": { "name": "P6:R1", "styleUrl": "#msn_placemark_circle0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13899609006498, -11.61910341459283, 0 ] }, "properties": { "name": "P7:R1-PIN", "styleUrl": "#msn_placemark_circle3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1379139777117, -11.61914385223756, 0 ] }, "properties": { "name": "P8:DOS POSTES-R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13703918409898, -11.61828831272705, 0 ] }, "properties": { "name": "P-9:DOS POSTES-R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13468062847653, -11.61567542016587, 0 ] }, "properties": { "name": "P13:S0+1 LP", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1359706194426, -11.61714418935629, 0 ] }, "properties": { "name": "P10:R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1357862714104, -11.61691886532479, 0 ] }, "properties": { "name": "P11:S0", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13522431369202, -11.61630622132517, 0 ] }, "properties": { "name": "P12:R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13453326136785, -11.61552228566654, 0 ] }, "properties": { "name": "P14:R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13430294802569, -11.61527001517086, 0 ] }, "properties": { "name": "T15:R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13235371916409, -11.61407508359791, 0 ] }, "properties": { "name": "P16:DOS POSTES-R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13130462644155, -11.61320212313534, 0 ] }, "properties": { "name": "P17:THREE WAY-R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1305410950798, -11.61263546820796, 0 ] }, "properties": { "name": "P18:A1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1300143138945, -11.61164291007835, 0 ] }, "properties": { "name": "P19:A2", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12991568190249, -11.60992531478466, 0 ] }, "properties": { "name": "P20:R1", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12985730454767, -11.60909367849066, 0 ] }, "properties": { "name": "P21:A2*", "styleUrl": "#msn_placemark_circle4" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12962165172124, -11.60751224880765, 0 ] }, "properties": { "name": "P22:R1", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12951800196517, -11.6068254614223, 0 ] }, "properties": { "name": "P23:A2*", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1294420122573, -11.60617473380813, 0 ] }, "properties": { "name": "P24:A1", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12971536820157, -11.60573060624014, 0 ] }, "properties": { "name": "P25:R1+2 PIN", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13049052146798, -11.60463349037963, 0 ] }, "properties": { "name": "P26:A1", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13094791799624, -11.60434235573836, 0 ] }, "properties": { "name": "P27:R1", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13124063231257, -11.60415132746171, 0 ] }, "properties": { "name": "P28:R1-PIN", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13142354667058, -11.60402402302477, 0 ] }, "properties": { "name": "P29:R1-PIN", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13162338216436, -11.60354401395574, 0 ] }, "properties": { "name": "P30:R1*+SECC", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13168677888756, -11.60334484147906, 0 ] }, "properties": { "name": "P31:S2*", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13166683320765, -11.60294707132232, 0 ] }, "properties": { "name": "P32:R1", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13161857257168, -11.6023504878965, 0 ] }, "properties": { "name": "P33:S0-1C", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13155036707604, -11.60135613418573, 0 ] }, "properties": { "name": "P34:A1*", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13172454566195, -11.60133736801021, 0 ] }, "properties": { "name": "P35:A2", "styleUrl": "#msn_placemark_circle1" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232243002964, -11.62101788009237, 0 ], [ -76.14262816789747, -11.62083937577406, 0 ], [ -76.14295048827718, -11.62063778566179, 0 ], [ -76.14347810712016, -11.62021936332017, 0 ], [ -76.14348529261056, -11.61954696892582, 0 ], [ -76.14241716385524, -11.61925800797873, 0 ], [ -76.14117745382681, -11.61889723438726, 0 ], [ -76.14017912506424, -11.61894787953184, 0 ], [ -76.13899519333019, -11.61909741277658, 0 ], [ -76.13791487509232, -11.61913773370697, 0 ], [ -76.137034605834, -11.61828360618312, 0 ], [ -76.1359685883636, -11.6171297162255, 0 ], [ -76.13578864011846, -11.61691339089228, 0 ], [ -76.1352246178304, -11.61629599275212, 0 ], [ -76.13466998336904, -11.61566702485515, 0 ], [ -76.13453494654989, -11.61551616373398, 0 ], [ -76.1342981969752, -11.61526074060272, 0 ], [ -76.13234719196441, -11.61406116543134, 0 ], [ -76.13130386844183, -11.61319606838499, 0 ], [ -76.13054438315093, -11.61263010714936, 0 ], [ -76.13000350947799, -11.61163132580327, 0 ], [ -76.12991074256459, -11.60991837489728, 0 ], [ -76.12985517543586, -11.60908491592153, 0 ], [ -76.12961819643117, -11.60750350103111, 0 ], [ -76.12951910179723, -11.60682163969981, 0 ], [ -76.12944226884845, -11.60616771719789, 0 ], [ -76.12971724565614, -11.60572828987408, 0 ], [ -76.13048851811374, -11.60462411582702, 0 ], [ -76.13094975819574, -11.60433978163304, 0 ], [ -76.13124068848732, -11.60414876537653, 0 ], [ -76.13142179047836, -11.60402171775137, 0 ], [ -76.13162242604226, -11.60354357411542, 0 ], [ -76.13168587566885, -11.60334447852337, 0 ], [ -76.13166645642411, -11.60294843772323, 0 ], [ -76.13161672644422, -11.60234984841893, 0 ], [ -76.1315492400745, -11.60135552313515, 0 ], [ -76.13172482209501, -11.60133632900435, 0 ], [ -76.13206130035621, -11.60093631450834, 0 ] ] }, "properties": { "name": "Cicuito C1A", "stroke": "#0000ff" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13136864475558, -11.61315666222933, 0 ] }, "properties": { "name": "Tree Way 110 DS 009", "styleUrl": "#msn_track0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13155918375872, -11.60354426541969, 0 ] }, "properties": { "name": "110 DS 021", "styleUrl": "#msn_track1" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232712242561, -11.62102416069766, 0 ], [ -76.14263208631986, -11.62084322953728, 0 ], [ -76.1429451528137, -11.62064247778055, 0 ], [ -76.14347515992557, -11.62022597491979, 0 ], [ -76.14348220026501, -11.61955767292041, 0 ], [ -76.1424157882472, -11.6192631631229, 0 ], [ -76.1411766077194, -11.61890528420217, 0 ], [ -76.14017599548181, -11.61895605405651, 0 ], [ -76.13899573811955, -11.61910301550125, 0 ], [ -76.13791179835225, -11.61914371086025, 0 ], [ -76.1370343419892, -11.61829058035264, 0 ], [ -76.13596941121645, -11.61714641483917, 0 ], [ -76.13578452748993, -11.61692098667978, 0 ], [ -76.13522368417306, -11.6163076967941, 0 ], [ -76.13467911071925, -11.61567616961192, 0 ], [ -76.13453282118776, -11.61552392950376, 0 ], [ -76.13430130694962, -11.61526836185344, 0 ], [ -76.13235087843216, -11.61407478910492, 0 ], [ -76.13130085427515, -11.61320158202054, 0 ], [ -76.13053743466156, -11.61263619654127, 0 ], [ -76.13001122578194, -11.61164361103586, 0 ], [ -76.12991553164798, -11.60993041148236, 0 ], [ -76.12985548272054, -11.60909352424326, 0 ], [ -76.12962124787109, -11.60751146974269, 0 ], [ -76.1295169494598, -11.6068254823038, 0 ], [ -76.12944101162222, -11.60617477753675, 0 ], [ -76.12971480663839, -11.6057311512346, 0 ], [ -76.13049014881037, -11.60463321405557, 0 ], [ -76.1309465623298, -11.60434219408339, 0 ], [ -76.13124020171531, -11.60415077267292, 0 ], [ -76.131422396518, -11.60402368427355, 0 ], [ -76.13162390467465, -11.60354357411542, 0 ], [ -76.13168587566885, -11.60334447852337, 0 ], [ -76.13166645642411, -11.60294843772323, 0 ], [ -76.13161672644422, -11.60234984841893, 0 ], [ -76.1315492400745, -11.60135552313515, 0 ], [ -76.13172482209501, -11.60133723911283, 0 ] ] }, "properties": { "name": "Anillo Min Cir 1A", "stroke": "#0000ff" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14232441599512, -11.6210975728026, 0 ] }, "properties": { "name": "P1: A3", "styleUrl": "#msn_placemark_circle6" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15363796498991, -11.60437922018987, 0 ] }, "properties": { "name": "P21:R1*", "styleUrl": "#msn_placemark_circle0010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14262653066154, -11.62096074687278, 0 ] }, "properties": { "name": "P2:R1-DT", "styleUrl": "#msn_placemark_circle020" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1433040590863, -11.62066871973589, 0 ] }, "properties": { "name": "P2A:R1-DT", "styleUrl": "#msn_placemark_circle020" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14428380962211, -11.62026698905186, 0 ] }, "properties": { "name": "P3:R1-DT", "styleUrl": "#msn_placemark_circle020" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14465922206212, -11.62011178650611, 0 ] }, "properties": { "name": "P4:R1-DT", "styleUrl": "#msn_placemark_circle020" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14512631406075, -11.61994717767588, 0 ] }, "properties": { "name": "P5:R1", "styleUrl": "#msn_placemark_circle020" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14585006486396, -11.61974538108552, 0 ] }, "properties": { "name": "P6:R1", "styleUrl": "#msn_placemark_circle020" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14752596647644, -11.61912386759396, 0 ] }, "properties": { "name": "R", "styleUrl": "#msn_placemark_circle5" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14754453180603, -11.61917804546052, 0 ] }, "properties": { "name": "S", "styleUrl": "#msn_placemark_circle5" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14756313414657, -11.61924126512857, 0 ] }, "properties": { "name": "T", "styleUrl": "#msn_placemark_circle5" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15173029586369, -11.61777795052176, 0 ] }, "properties": { "name": "R", "styleUrl": "#msn_placemark_circle5" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1517487875985, -11.61781404447189, 0 ] }, "properties": { "name": "S", "styleUrl": "#msn_placemark_circle5" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15177645094194, -11.61785010181189, 0 ] }, "properties": { "name": "T", "styleUrl": "#msn_placemark_circle5" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15348921059346, -11.61281594398398, 0 ] }, "properties": { "name": "P15:A2+JUMPER", "styleUrl": "#msn_placemark_circle010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14741561058646, -11.61905197086909, 0 ] }, "properties": { "name": "P7A RST", "styleUrl": "#msn_shaded_dot" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14757197278186, -11.61915985241755, 0 ] }, "properties": { "name": "P7 RST", "open": 1, "styleUrl": "#msn_shaded_dot0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15172130992339, -11.61782319608447, 0 ] }, "properties": { "name": "P8 RST:A2", "styleUrl": "#msn_placemark_circle7" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15355971966376, -11.61211943306964, 0 ] }, "properties": { "name": "P16:R1", "styleUrl": "#msn_placemark_circle010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15363060028078, -11.61151334002912, 0 ] }, "properties": { "name": "T", "styleUrl": "#msn_placemark_circle01" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15358474332865, -11.61151352326436, 0 ] }, "properties": { "name": "S", "styleUrl": "#msn_placemark_circle01" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15352971498507, -11.61151374313703, 0 ] }, "properties": { "name": "R", "styleUrl": "#msn_placemark_circle01" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15360980418384, -11.61091665523181, 0 ] }, "properties": { "name": "T", "styleUrl": "#msn_placemark_circle01" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15356394732888, -11.61091683845446, 0 ] }, "properties": { "name": "S", "styleUrl": "#msn_placemark_circle01" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15351805330567, -11.61090797988097, 0 ] }, "properties": { "name": "R", "styleUrl": "#msn_placemark_circle01" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15353805319182, -11.60684806917472, 0 ] }, "properties": { "name": "T18:TR1+JUMPER", "styleUrl": "#msn_picnic" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15383064086738, -11.60662989386238, 0 ] }, "properties": { "name": "P19:A2", "styleUrl": "#msn_placemark_circle0010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15392357143347, -11.60469454738545, 0 ] }, "properties": { "name": "P20:A2", "styleUrl": "#msn_placemark_circle0010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1525138879419, -11.60311783473279, 0 ] }, "properties": { "name": "P22:A2", "styleUrl": "#msn_placemark_circle0010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15100046746598, -11.60307865848415, 0 ] }, "properties": { "name": "P23:R1", "styleUrl": "#msn_placemark_circle0010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14898256061782, -11.60302339715125, 0 ] }, "properties": { "name": "P25:R1**", "styleUrl": "#msn_placemark_circle0010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14938612723061, -11.60303083382858, 0 ] }, "properties": { "name": "P24:R1", "styleUrl": "#msn_placemark_circle0010" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14819262349468, -11.60272815303694, 0 ] }, "properties": { "name": "P26:A2-LP", "styleUrl": "#msn_placemark_circle000" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14743376891013, -11.61900668890068, 0 ] }, "properties": { "name": "ST", "styleUrl": "#msn_open-diamond" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14745222321653, -11.61903374136396, 0 ] }, "properties": { "name": "R", "styleUrl": "#msn_open-diamond0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15358489201526, -11.61154969042101, 0 ] }, "properties": { "name": "P17 RST:A2+JUMPER", "styleUrl": "#msn_placemark_circle03" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15349079935946, -11.61097138233455, 0 ] }, "properties": { "name": "P17A RST:S0-3C", "styleUrl": "#msn_placemark_circle03" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15360135465801, -11.60439745027796, 0 ] }, "properties": { "name": "110 DS 016", "styleUrl": "#msn_track2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1534456349297, -11.60667664140428, 0 ] }, "properties": { "name": "P18A THREE WAY", "styleUrl": "#msn_parking_lot" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15249955840362, -11.6174945790637, 0 ] }, "properties": { "name": "P.09", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15291888684136, -11.61686901040025, 0 ] }, "properties": { "name": "P.10", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153319126827, -11.61606267884212, 0 ] }, "properties": { "name": "P.11", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15370124478511, -11.6153106709463, 0 ] }, "properties": { "name": "P.12", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15401938359636, -11.61461317011068, 0 ] }, "properties": { "name": "P.13", "styleUrl": "#m_ylw-pushpin3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15427387872276, -11.61405155256025, 0 ] }, "properties": { "name": "P.14", "styleUrl": "#m_ylw-pushpin3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15495757004906, -11.61303612128023, 0 ] }, "properties": { "name": "P.14A", "styleUrl": "#m_ylw-pushpin3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15382012584988, -11.61299546024228, 0 ] }, "properties": { "name": "P.14B", "styleUrl": "#m_ylw-pushpin3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15484769890396, -11.61308177051608, 0 ] }, "properties": { "name": "P.14A", "styleUrl": "#m_ylw-pushpin3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1536458313406, -11.61298711491135, 0 ] }, "properties": { "name": "P.14C", "styleUrl": "#m_ylw-pushpin3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.15349841919993, -11.61282494912513, 0 ] }, "properties": { "name": "P.15", "styleUrl": "#m_ylw-pushpin3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14833873287552, -11.6025738590395, 0 ] }, "properties": { "name": "P.25_S", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14837530641377, -11.60254658779497, 0 ] }, "properties": { "name": "P.25_R", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14829309912939, -11.60262829216565, 0 ] }, "properties": { "name": "P.25_T", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14587021168832, -11.59997053170992, 0 ] }, "properties": { "name": "P.26_R", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14584277234188, -11.59998872444757, 0 ] }, "properties": { "name": "P.26_S", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14579695402907, -11.59999794808915, 0 ] }, "properties": { "name": "P.26_T", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14548207831173, -11.59924871301568, 0 ] }, "properties": { "name": "P.27", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14439223704512, -11.59737230046736, 0 ] }, "properties": { "name": "P.28", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14241820086494, -11.59681950685691, 0 ] }, "properties": { "name": "P.29", "styleUrl": "#msn_placemark_circle2" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232458661287, -11.62109414639433, 0 ], [ -76.1426251297806, -11.62095696947386, 0 ], [ -76.14330476150646, -11.6206574152589, 0 ], [ -76.14428488923562, -11.62025888476571, 0 ], [ -76.14465991415832, -11.6200990787121, 0 ], [ -76.14513122940636, -11.61993289812749, 0 ], [ -76.14585208271038, -11.61973774233161, 0 ], [ -76.14754435908131, -11.61917561333945, 0 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.1458485021341, -11.61973546825456, 0 ], [ -76.14756394534506, -11.61923743467661, 0 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14584878183182, -11.61973707302746, 0 ], [ -76.14752594770043, -11.61912315502635, 0 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14745429657702, -11.61902797669989, 0 ], [ -76.15177704203697, -11.61784597717197, 0 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14743508031167, -11.61900254049076, 0 ], [ -76.15172577517664, -11.61777363049067, 0 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14756566488666, -11.61923918973697, 0 ], [ -76.14743325188782, -11.6190033088657, 0 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14754285977962, -11.61917451314597, 0 ], [ -76.1474365489253, -11.61900426270579, 0 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14752558708462, -11.61912131030682, 0 ], [ -76.14745427922566, -11.61902781485821, 0 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14744629429892, -11.61901511413068, 0 ], [ -76.15175254737782, -11.61781324219075, 0 ], [ -76.15253016605493, -11.6174880031007, 0 ], [ -76.15179636580471, -11.61785021565903, 0 ], [ -76.15172762907096, -11.61777032582202, 0 ], [ -76.15252873051544, -11.61748754692267, 0 ], [ -76.15288882694585, -11.61685720998512, 0 ], [ -76.15328883781984, -11.61605365074484, 0 ], [ -76.15367398674657, -11.61529146231789, 0 ], [ -76.15399026696382, -11.61459933282537, 0 ], [ -76.15424440420631, -11.61402486862283, 0 ], [ -76.15487231391799, -11.61307445067306, 0 ], [ -76.15382299588725, -11.61299531175284, 0 ], [ -76.15366947617498, -11.61298349562511, 0 ], [ -76.15351789447614, -11.61281900659929, 0 ], [ -76.15357293821369, -11.61211846343082, 0 ], [ -76.15364991533926, -11.61150846858545, 0 ], [ -76.15360034905522, -11.61090873897039, 0 ], [ -76.15356639786437, -11.60686432958582, 0 ], [ -76.15356495551457, -11.61211429360133, 0 ], [ -76.1535347966818, -11.61151049988099, 0 ], [ -76.15353772546888, -11.61090067372264, 0 ], [ -76.15355982479014, -11.60685371309134, 0 ], [ -76.15387817474084, -11.60660751496424, 0 ], [ -76.15394088718223, -11.60469564898052, 0 ], [ -76.15365762168506, -11.60437326532612, 0 ], [ -76.15254326556384, -11.60311246855383, 0 ], [ -76.1510358178847, -11.60307315635542, 0 ], [ -76.14943832722673, -11.60302672056986, 0 ], [ -76.14837115921614, -11.60254795477007, 0 ], [ -76.14587722889623, -11.59995941023181, 0 ], [ -76.14548751262917, -11.59924037003788, 0 ], [ -76.14584550206683, -11.59997322299004, 0 ], [ -76.14833192874185, -11.60257506203614, 0 ], [ -76.14943783761534, -11.60302740522036, 0 ], [ -76.14829330419772, -11.60262775982303, 0 ], [ -76.14579818548408, -11.59998130573718, 0 ], [ -76.14548766483622, -11.59924219280328, 0 ], [ -76.14439946099924, -11.59733317599502, 0 ], [ -76.14242037313713, -11.59679700674748, 0 ] ] }, "properties": { "name": "L.3", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14465922206212, -11.62011178650611, 0 ] }, "properties": { "name": "P4:R1-DT" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14428380962211, -11.62026698905186, 0 ] }, "properties": { "name": "P3:R1-DT" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1433040590863, -11.62066871973589, 0 ] }, "properties": { "name": "P2A:R1-DT" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14262653066154, -11.62096074687278, 0 ] }, "properties": { "name": "P2:R1-DT" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14232426863526, -11.6210614055265, 0 ] }, "properties": { "name": "P1: A3" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14469550281946, -11.62001218101279, 0 ] }, "properties": { "name": "P1:THREE WAY-R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14467656883163, -11.61986758479612, 0 ] }, "properties": { "name": "P2:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1446477249793, -11.61954218871163, 0 ] }, "properties": { "name": "P3:S2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14455202239223, -11.61856603674119, 0 ] }, "properties": { "name": "P4:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14479026382091, -11.61851083985542, 0 ] }, "properties": { "name": "P cable desconectado" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14544093368166, -11.61838167018113, 0 ] }, "properties": { "name": "P" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14457621606408, -11.61775216436268, 0 ] }, "properties": { "name": "P5 Secc: A3" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14467723325002, -11.62003033741706, 0 ] }, "properties": { "name": "110 DS 008" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14465967833841, -11.620110047178, 0 ], [ -76.14468927369262, -11.6200094440963, 0 ], [ -76.14467412511539, -11.61986020429342, 0 ], [ -76.14464149422271, -11.61953591251048, 0 ], [ -76.14455019660471, -11.61855546116685, 0 ], [ -76.14457664261761, -11.61774999429316, 0 ] ] }, "properties": { "name": "Drv. Antiguo Truck Shop" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232346476558, -11.62105793403807, 0 ], [ -76.14262829939479, -11.62095693847417, 0 ], [ -76.1433048131181, -11.6206644638621, 0 ], [ -76.14428220026711, -11.62026397178024, 0 ], [ -76.14465905620234, -11.62010643452295, 0 ] ] }, "properties": { "name": "Anillo Mina C1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1423241212759, -11.62102523825032, 0 ] }, "properties": { "name": "P1:A3" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14262605162297, -11.62084320323646, 0 ] }, "properties": { "name": "P2:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14294625128935, -11.62064301163397, 0 ] }, "properties": { "name": "P3:S0" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14347651493917, -11.62022498009887, 0 ] }, "properties": { "name": "P4:A1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14348295800886, -11.61955584935576, 0 ] }, "properties": { "name": "P5:A2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14241782658176, -11.61926168397149, 0 ] }, "properties": { "name": "T6:S0-3C" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14117817766157, -11.61890491095095, 0 ] }, "properties": { "name": "T7:S0-3C" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14017864903327, -11.61895407232934, 0 ] }, "properties": { "name": "P6:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13899609006498, -11.61910341459283, 0 ] }, "properties": { "name": "P7:R1-PIN" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1379139777117, -11.61914385223756, 0 ] }, "properties": { "name": "P8:DOS POSTES-R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13703918409898, -11.61828831272705, 0 ] }, "properties": { "name": "P-9:DOS POSTES-R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13468062847653, -11.61567542016587, 0 ] }, "properties": { "name": "P13:S0+1 LP" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1359706194426, -11.61714418935629, 0 ] }, "properties": { "name": "P10:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1357862714104, -11.61691886532479, 0 ] }, "properties": { "name": "P11:S0" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13522431369202, -11.61630622132517, 0 ] }, "properties": { "name": "P12:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13453326136785, -11.61552228566654, 0 ] }, "properties": { "name": "P14:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13430294802569, -11.61527001517086, 0 ] }, "properties": { "name": "T15:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13235371916409, -11.61407508359791, 0 ] }, "properties": { "name": "P16:DOS POSTES-R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13130462644155, -11.61320212313534, 0 ] }, "properties": { "name": "P17:THREE WAY-R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1305410950798, -11.61263546820796, 0 ] }, "properties": { "name": "P18:A1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1300143138945, -11.61164291007835, 0 ] }, "properties": { "name": "P19:A2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12991568190249, -11.60992531478466, 0 ] }, "properties": { "name": "P20:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12985730454767, -11.60909367849066, 0 ] }, "properties": { "name": "P21:A2*" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12962165172124, -11.60751224880765, 0 ] }, "properties": { "name": "P22:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12951800196517, -11.6068254614223, 0 ] }, "properties": { "name": "P23:A2*" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1294420122573, -11.60617473380813, 0 ] }, "properties": { "name": "P24:A1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.12971536820157, -11.60573060624014, 0 ] }, "properties": { "name": "P25:R1+2 PIN" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13049052146798, -11.60463349037963, 0 ] }, "properties": { "name": "P26:A1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13094975819574, -11.60434235573836, 0 ] }, "properties": { "name": "P27:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13124063231257, -11.60415132746171, 0 ] }, "properties": { "name": "P28:R1-PIN" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13142354667058, -11.60402402302477, 0 ] }, "properties": { "name": "P29:R1-PIN" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13162338216436, -11.60354401395574, 0 ] }, "properties": { "name": "P30:R1*+SECC" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13168677888756, -11.60334484147906, 0 ] }, "properties": { "name": "P31:S2*" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13166683320765, -11.60294707132232, 0 ] }, "properties": { "name": "P32:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13161857257168, -11.6023504878965, 0 ] }, "properties": { "name": "P33:S0-1C" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13155036707604, -11.60135613418573, 0 ] }, "properties": { "name": "P34:A1*" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13172454566195, -11.60133736801021, 0 ] }, "properties": { "name": "P35:A2" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232243002964, -11.62101788009237, 0 ], [ -76.14262816789747, -11.62083937577406, 0 ], [ -76.14295048827718, -11.62063778566179, 0 ], [ -76.14347810712016, -11.62021936332017, 0 ], [ -76.14348529261056, -11.61954696892582, 0 ], [ -76.14241716385524, -11.61925800797873, 0 ], [ -76.14117745382681, -11.61889723438726, 0 ], [ -76.14017912506424, -11.61894787953184, 0 ], [ -76.13899519333019, -11.61909741277658, 0 ], [ -76.13791487509232, -11.61913773370697, 0 ], [ -76.137034605834, -11.61828360618312, 0 ], [ -76.1359685883636, -11.6171297162255, 0 ], [ -76.13578864011846, -11.61691339089228, 0 ], [ -76.1352246178304, -11.61629599275212, 0 ], [ -76.13466998336904, -11.61566702485515, 0 ], [ -76.13453494654989, -11.61551616373398, 0 ], [ -76.1342981969752, -11.61526074060272, 0 ], [ -76.13235087843216, -11.61406116543134, 0 ], [ -76.13130386844183, -11.61319606838499, 0 ], [ -76.13054438315093, -11.61263010714936, 0 ], [ -76.13000350947799, -11.61163132580327, 0 ], [ -76.12991074256459, -11.60991837489728, 0 ], [ -76.12985517543586, -11.60908491592153, 0 ], [ -76.12961819643117, -11.60750350103111, 0 ], [ -76.12951910179723, -11.60682163969981, 0 ], [ -76.12944226884845, -11.60616771719789, 0 ], [ -76.12971724565614, -11.60572828987408, 0 ], [ -76.13048851811374, -11.60462411582702, 0 ], [ -76.13094975819574, -11.60433978163304, 0 ], [ -76.13124068848732, -11.60414876537653, 0 ], [ -76.13142179047836, -11.60402171775137, 0 ], [ -76.13162242604226, -11.60354374781281, 0 ], [ -76.13168587566885, -11.60334447852337, 0 ], [ -76.13166645642411, -11.60294843772323, 0 ], [ -76.13161672644422, -11.60234984841893, 0 ], [ -76.1315492400745, -11.60135552313515, 0 ], [ -76.13172482209501, -11.60133632900435, 0 ], [ -76.13206130035621, -11.60093631450834, 0 ] ] }, "properties": { "name": "Cicuito C1A", "stroke": "#0000ff" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13136864475558, -11.61315666222933, 0 ] }, "properties": { "name": "Tree Way 110 DS 009" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13155918375872, -11.60354426541969, 0 ] }, "properties": { "name": "110 DS 021" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232712242561, -11.62102416069766, 0 ], [ -76.14263208631986, -11.62084322953728, 0 ], [ -76.1429451528137, -11.62064247778055, 0 ], [ -76.14347515992557, -11.62022597491979, 0 ], [ -76.14348220026501, -11.61955767292041, 0 ], [ -76.1424157882472, -11.6192631631229, 0 ], [ -76.1411766077194, -11.61890528420217, 0 ], [ -76.14017599548181, -11.61895605405651, 0 ], [ -76.13899573811955, -11.61910301550125, 0 ], [ -76.13791179835225, -11.61914371086025, 0 ], [ -76.1370343419892, -11.61829058035264, 0 ], [ -76.13596941121645, -11.61714641483917, 0 ], [ -76.13578452748993, -11.61692098667978, 0 ], [ -76.13522368417306, -11.6163076967941, 0 ], [ -76.13467911071925, -11.61567616961192, 0 ], [ -76.13453282118776, -11.61552392950376, 0 ], [ -76.13430130694962, -11.61526836185344, 0 ], [ -76.13235087843216, -11.61407478910492, 0 ], [ -76.13130085427515, -11.61320158202054, 0 ], [ -76.13053743466156, -11.61263619654127, 0 ], [ -76.13001122578194, -11.61164361103586, 0 ], [ -76.12991553164798, -11.60993041148236, 0 ], [ -76.12985548272054, -11.60909352424326, 0 ], [ -76.12962124787109, -11.60751146974269, 0 ], [ -76.1295169494598, -11.6068254823038, 0 ], [ -76.12944101162222, -11.60617477753675, 0 ], [ -76.12971480663839, -11.6057311512346, 0 ], [ -76.13048851811374, -11.60463321405557, 0 ], [ -76.1309465623298, -11.60434219408339, 0 ], [ -76.13124020171531, -11.60414876537653, 0 ], [ -76.13142179047836, -11.60402171775137, 0 ], [ -76.13162242604226, -11.60354357411542, 0 ], [ -76.13168587566885, -11.60334447852337, 0 ], [ -76.13166645642411, -11.60294843772323, 0 ], [ -76.13161672644422, -11.60234984841893, 0 ], [ -76.1315492400745, -11.60135552313515, 0 ], [ -76.13172482209501, -11.60133632900435, 0 ], [ -76.13206130035621, -11.60093631450834, 0 ] ] }, "properties": { "name": "L.3", "stroke": "#ffff00" } },
         { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.15424372829537, -11.61404305687519, 0 ], [ -76.15494384739594, -11.61302138012434, 0 ], [ -76.15381312655518, -11.61298898320669, 0 ] ] }, "properties": { "name": "L.4", "stroke": "#ffff00" } }
       ]
     };
@@ -286,19 +210,31 @@
         document.getElementById('view-gensets').style.display = (tab === 'gensets') ? 'block' : 'none';
         document.getElementById('tab-vol').className = (tab === 'voladuras') ? 'tab-btn active' : 'tab-btn';
         document.getElementById('tab-gen').className = (tab === 'gensets') ? 'tab-btn active' : 'tab-btn';
-
-        var btnRep = document.getElementById('btn-reporte');
-        if(tab === 'gensets') {
-            btnRep.style.display = 'block';
-        } else {
-            btnRep.style.display = 'none';
-        }
     }
 
-    async function cargarReporteNativo() {
+    // --- REPORTE GENÉRICO (Sirve para Gensets y Postes) ---
+    function mostrarReporteGenerico(titulo, filas) {
         var modal = document.getElementById('modal-reporte');
         var contenedor = document.getElementById('contenedor-tabla');
+        var tituloSpan = document.getElementById('modal-titulo');
         
+        tituloSpan.innerText = titulo;
+        modal.style.display = "flex";
+        
+        let htmlTabla = '<table id="tabla-dinamica"><tr><th>DETALLE</th><th>ESTADO</th></tr>';
+        filas.forEach(f => {
+            htmlTabla += `<tr><td>${f.nombre}</td><td>${f.estado}</td></tr>`;
+        });
+        htmlTabla += '</table>';
+        contenedor.innerHTML = htmlTabla;
+    }
+
+    async function cargarReporteNativo() { // Para Gensets (desde CSV)
+        var modal = document.getElementById('modal-reporte');
+        var contenedor = document.getElementById('contenedor-tabla');
+        var tituloSpan = document.getElementById('modal-titulo');
+        
+        tituloSpan.innerText = "📋 REPORTE TÉCNICO";
         modal.style.display = "flex";
         contenedor.innerHTML = '<div style="padding:20px; text-align:center; color:grey;">⏳ Descargando datos...</div>';
 
@@ -306,9 +242,7 @@
             const response = await fetch(LINK_REPORTE_CSV + '&t=' + Date.now());
             const text = await response.text();
             const filas = text.split('\n');
-
             let htmlTabla = '<table id="tabla-dinamica">';
-            
             for (let i = 0; i < filas.length; i++) {
                 if(filas[i].trim() === "") continue;
                 var celdas = filas[i].split(',');
@@ -321,7 +255,6 @@
             }
             htmlTabla += '</table>';
             contenedor.innerHTML = htmlTabla;
-
         } catch (error) {
             contenedor.innerHTML = '<div style="padding:20px; text-align:center; color:red;">❌ Error al cargar reporte.</div>';
         }
@@ -350,30 +283,15 @@
     var capaTormentas = L.layerGroup().addTo(map);
     var lineaDistancia = L.layerGroup().addTo(map);
 
-    // --- FUNCIÓN ESTILO LÍNEAS DE ENERGÍA ---
+    // --- ESTILOS "FANTASMA" (Casi invisibles) ---
     function estiloEnergia(feature) {
         var colorLinea = feature.properties.stroke || "#f1c40f"; 
-        return {
-            color: colorLinea,
-            weight: 3,
-            opacity: 0.8,
-            dashArray: '5, 5'
-        };
+        return { color: colorLinea, weight: 2, opacity: 0.3, dashArray: '5, 5' };
     }
-
-    // --- FUNCIÓN ESTILO POSTES (PUNTOS) ---
     function estiloPuntos(feature, latlng) {
-        return L.circleMarker(latlng, {
-            radius: 4,
-            fillColor: "#00ffff", // Cyan
-            color: "#000",
-            weight: 1,
-            opacity: 1,
-            fillOpacity: 0.8
-        });
+        return L.circleMarker(latlng, { radius: 3, fillColor: "#00ffff", color: "#000", weight: 1, opacity: 0.3, fillOpacity: 0.3 });
     }
 
-    // --- CREAR CAPA DE ENERGÍA ---
     var capaEnergia = L.geoJSON(datosEnergia, {
         style: estiloEnergia,
         pointToLayer: estiloPuntos,
@@ -384,15 +302,9 @@
         }
     }).addTo(map);
 
-    // --- CONTROL DE CAPAS ---
     L.control.layers(
         { "🌎 Satélite": mapaSatelite, "🗺️ Plano": mapaPlano, "⛰️ Topográfico": mapaTopo }, 
-        { 
-            "⚡ Sensores": capaTormentas, 
-            "💥 Voladuras": capaVoladuras, 
-            "🟣 Gensets": capaGensets,
-            "🔌 Líneas Eléctricas": capaEnergia 
-        }, 
+        { "⚡ Sensores": capaTormentas, "💥 Voladuras": capaVoladuras, "🟣 Gensets": capaGensets, "🔌 Líneas Eléctricas": capaEnergia }, 
         { position: 'topright' }
     ).addTo(map);
 
@@ -409,6 +321,7 @@
 
     var zonasProgramadas = [];
     var zonasActivasAhora = []; 
+    var postesAfectados = []; // Lista para guardar los afectados
     var intervaloChequeo = null;
 
     function actualizarTodo() {
@@ -465,32 +378,14 @@
                         try {
                             const c = proj4("EPSG:32718", "EPSG:4326", [e, n]);
                             const lat = c[1]; const lon = c[0];
-
                             const iconoGenset = L.divIcon({
                                 className: 'genset-marker',
                                 html: `<svg viewBox="0 0 24 24"><path d="M4 6h16v10H4z"/><path d="M6 8h12v6H6z" fill="#8e44ad"/><path d="M7 9h3v4H7zm4 0h3v4h-3zm4 0h3v4h-3z" fill="white"/><path d="M5 16v3h2v-3m10 0v3h2v-3" stroke="white" stroke-width="2"/></svg>`,
                                 iconSize: [28, 28], iconAnchor: [14, 14]
                             });
-
-                            const popupContent = `
-                                <div style="min-width:180px;">
-                                    <h3 style="margin:0; color:#8e44ad; border-bottom:1px solid #ccc;">${nombre}</h3>
-                                    <table class="tabla-info">
-                                        <tr><td>Estado:</td><td><b style="color:#27ae60">${estado}</b></td></tr>
-                                        <tr><td>Lugar:</td><td>${lugar}</td></tr>
-                                        <tr><td>Horas:</td><td>${horas} hrs</td></tr>
-                                        <tr><td>Tensión:</td><td>${tension}</td></tr>
-                                        <tr><td>Coord:</td><td><small>${n}, ${e}</small></td></tr>
-                                    </table>
-                                </div>`;
-
+                            const popupContent = `<div style="min-width:180px;"><h3 style="margin:0; color:#8e44ad;">${nombre}</h3><table class="tabla-info"><tr><td>Estado:</td><td>${estado}</td></tr><tr><td>Lugar:</td><td>${lugar}</td></tr><tr><td>Coord:</td><td><small>${n}, ${e}</small></td></tr></table></div>`;
                             L.marker([lat, lon], {icon: iconoGenset}).bindPopup(popupContent).addTo(capaGensets);
-
-                            listaDiv.innerHTML += `
-                                <div class="list-item genset-item" onclick="viajarA(${lat}, ${lon})">
-                                    <div><strong>${nombre}</strong><br><small>${lugar}</small></div>
-                                    <div style="font-size:1.2em; color:#8e44ad">⚡</div>
-                                </div>`;
+                            listaDiv.innerHTML += `<div class="list-item genset-item" onclick="viajarA(${lat}, ${lon})"><div><strong>${nombre}</strong><br><small>${lugar}</small></div><div style="font-size:1.2em; color:#8e44ad">⚡</div></div>`;
                         } catch(e) {}
                     }
                 }
@@ -537,11 +432,7 @@
             }
 
             if (estadoTexto !== "FINALIZADO" || (ahora - fechaFin) < 7200000) {
-                listaDiv.innerHTML += `
-                    <div class="list-item" style="border-left-color: ${colorBorde};">
-                        <div><strong style="font-size:1.1em">${zona.detalle}</strong><br><span style="color:${colorBorde}; font-weight:bold;">${estadoTexto}</span></div>
-                        <div style="text-align:right;">${zona.hora}<br><small>${zona.dur} min</small></div>
-                    </div>`;
+                listaDiv.innerHTML += `<div class="list-item" style="border-left-color: ${colorBorde};"><div><strong style="font-size:1.1em">${zona.detalle}</strong><br><span style="color:${colorBorde}; font-weight:bold;">${estadoTexto}</span></div><div style="text-align:right;">${zona.hora}<br><small>${zona.dur} min</small></div></div>`;
             }
         });
 
@@ -549,59 +440,101 @@
         if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
         
         if (miPosicion) chequearProximidadVoladura();
-        
-        // --- AQUÍ EJECUTAMOS LA ALERTA DE POSTES ---
         verificarInterferencias(); 
     }
 
-    // --- NUEVO: DETECTOR DE INTERFERENCIAS (Postes vs Voladura) ---
+    // --- DETECTOR DE INTERFERENCIAS (Sin cambio de tamaño) ---
     function verificarInterferencias() {
-        // 1. Resetear estilos a normal
+        postesAfectados = []; // Resetear lista de reportes
+
+        // 1. Resetear todo a fantasma
         capaEnergia.eachLayer(function(layer) {
             if (layer instanceof L.CircleMarker) { 
-                layer.setStyle({ fillColor: "#00ffff", color: "#000", radius: 4 }); 
+                layer.setStyle({ fillColor: "#00ffff", color: "#000", radius: 3, opacity: 0.3, fillOpacity: 0.3 }); 
             } else if (layer instanceof L.Polyline) { 
-                layer.setStyle({ color: layer.feature.properties.stroke || "#f1c40f", weight: 3, dashArray: '5, 5', opacity: 0.8 });
+                layer.setStyle({ color: layer.feature.properties.stroke || "#f1c40f", weight: 2, dashArray: '5, 5', opacity: 0.3 });
             }
         });
 
-        if (zonasActivasAhora.length === 0) return;
+        if (zonasActivasAhora.length === 0) {
+            document.getElementById('btn-interferencia').style.display = 'none';
+            return;
+        }
 
-        // 2. Buscar conflictos y pintar de ROJO
+        // 2. Buscar conflictos
         zonasActivasAhora.forEach(zona => {
-            // Solo si la zona es PELIGROSA (Roja)
             if(zona.type === "red") {
                 capaEnergia.eachLayer(function(layer) {
                     let afectado = false;
-                    // Caso A: Poste (Punto)
+                    // Puntos
                     if (layer instanceof L.CircleMarker) {
-                        let dist = map.distance(layer.getLatLng(), zona.center);
-                        if (dist <= zona.radius) afectado = true;
+                        if (map.distance(layer.getLatLng(), zona.center) <= zona.radius) afectado = true;
                     }
-                    // Caso B: Cable (Línea)
+                    // Líneas
                     else if (layer instanceof L.Polyline) {
-                        let puntos = layer.getLatLngs();
-                        let listaPuntos = puntos.flat ? puntos.flat(99) : puntos; 
-                        for (let p of listaPuntos) {
-                            if (map.distance(p, zona.center) <= zona.radius) {
-                                afectado = true; break; 
-                            }
+                        let puntos = layer.getLatLngs().flat ? layer.getLatLngs().flat(99) : layer.getLatLngs(); 
+                        for (let p of puntos) {
+                            if (map.distance(p, zona.center) <= zona.radius) { afectado = true; break; }
                         }
                     }
 
                     if (afectado) {
+                        // Guardar en la lista para el reporte
+                        postesAfectados.push({
+                            nombre: layer.feature.properties.name || "Sin Nombre",
+                            estado: "⚠️ En radio de: " + zona.name
+                        });
+
+                        // Pintar ROJO INTENSO (Mismo tamaño)
                         if (layer instanceof L.CircleMarker) {
-                            layer.setStyle({ fillColor: "red", color: "white", radius: 10, weight: 2 });
-                            layer.bindPopup("🚨 <b>¡POSTE EN ZONA DE VOLADURA!</b><br>" + (layer.feature.properties.name || "Sin nombre"));
+                            layer.setStyle({ fillColor: "red", color: "white", radius: 3, weight: 2, opacity: 1, fillOpacity: 1 });
+                            layer.bindPopup("🚨 <b>¡AFECTADO POR VOLADURA!</b><br>" + (layer.feature.properties.name || "Sin nombre"));
                         } else {
-                            layer.setStyle({ color: "red", weight: 6, dashArray: null, opacity: 1 });
+                            layer.setStyle({ color: "red", weight: 4, dashArray: null, opacity: 1 });
                         }
                     }
                 });
             }
         });
+
+        // 3. Mostrar botón si hay problemas
+        var btnAlert = document.getElementById('btn-interferencia');
+        if (postesAfectados.length > 0) {
+            btnAlert.style.display = 'block';
+            btnAlert.innerText = `⚠️ ${postesAfectados.length} INTERFERENCIAS`;
+            // Enviar notificación solo una vez
+            enviarNotificacion("ALERTA CRÍTICA", `Se detectaron ${postesAfectados.length} postes/cables en zona de voladura.`);
+        } else {
+            btnAlert.style.display = 'none';
+        }
     }
 
+    function mostrarTablaInterferencias() {
+        mostrarReporteGenerico("⚠️ POSTES AFECTADOS", postesAfectados);
+    }
+
+    // --- NOTIFICACIONES ---
+    var notificacionEnviada = false;
+    function pedirPermisoNotificaciones() {
+        if (!("Notification" in window)) alert("No soportado");
+        else if (Notification.permission !== "denied") {
+            Notification.requestPermission().then(function (p) {
+                if (p === "granted") {
+                    alert("Notificaciones Activadas");
+                    document.getElementById('btn-permiso').style.display = 'none';
+                }
+            });
+        }
+    }
+    function enviarNotificacion(t, c) {
+        if (Notification.permission === "granted" && !notificacionEnviada) {
+            new Notification("🚨 ALERTA TOROMOCHO", { body: t + ": " + c });
+            notificacionEnviada = true; setTimeout(() => { notificacionEnviada = false; }, 300000); 
+        }
+    }
+    if (Notification.permission !== "granted" && "Notification" in window) document.getElementById('btn-permiso').style.display = 'block';
+
+    // --- GPS ---
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
     var marcadorVehiculo = null;
     var miPosicion = null;
@@ -637,6 +570,7 @@
             if (distBorde <= 0) {
                 alertaActiva = true; claseCritica = true; mensaje = `⛔ ¡PELIGRO!<br>ESTÁS DENTRO DE: ${zona.name}`;
                 L.polyline([miPosicion, zona.center], {color: 'red', weight: 4}).addTo(lineaDistancia);
+                enviarNotificacion("PELIGRO PERSONAL", "Usted está DENTRO de zona de voladura");
             } else if (distBorde <= UMBRAL) {
                 if (!claseCritica) {
                     alertaActiva = true; mensaje = `⚠️ PRECAUCIÓN<br>A ${distBorde.toFixed(0)}m de: ${zona.name}`;
