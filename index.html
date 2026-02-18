@@ -4,9 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SISTEMA GESTIÓN TOROMOCHO</title>
+    
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* ESTILOS (Optimizados) */
+        /* --- ESTILOS --- */
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
@@ -25,20 +26,20 @@
         
         button { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
         button:active { transform: scale(0.98); }
+        
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
-        .btn-report { background: #d35400; color: white; border: 1px solid #e67e22; margin-bottom: 15px; }
+        .btn-report { background: #d35400; color: white; border: 1px solid #e67e22; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
         
-        /* BOTÓN ALERTA ROJA (Más visible) */
+        /* BOTÓN ALERTA POSTES (ROJO) */
         .btn-alert { 
-            background: #e74c3c; color: white; 
-            border: 2px solid #ff0000; margin-bottom: 15px; 
-            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
-            font-size: 0.9em; text-transform: uppercase;
-            animation: latido 1s infinite alternate; 
+            background: #c0392b; color: white; 
+            border: 2px solid #e74c3c; margin-bottom: 15px; 
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+            animation: parpadeo-boton 1s infinite alternate; 
             display: none; 
         }
-        @keyframes latido { from { transform: scale(1); } to { transform: scale(1.05); } }
+        @keyframes parpadeo-boton { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(0.98); } }
 
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
@@ -47,30 +48,35 @@
         .list-item { background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
+
         .genset-marker { background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black; display: flex; align-items: center; justify-content: center; }
         .genset-marker svg { width: 18px; height: 18px; fill: white; }
         .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
 
-        #radio-silence-alert { position: absolute; bottom: 30px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo 0.8s infinite alternate; }
-        @keyframes parpadeo { from { opacity: 1; } to { opacity: 0.8; } }
+        #radio-silence-alert { position: absolute; bottom: 30px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate; }
+        @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
         
         #reloj-sistema { font-family: monospace; color: #f1c40f; text-align: center; font-size: 1.2em; margin-bottom: 10px; border: 1px solid #555; padding: 5px; background: rgba(0,0,0,0.3); }
-        .storm-alert, .proximity-alert { padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
-        .storm-alert { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; color: #f1c40f; }
-        .proximity-alert { background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12; color: #e67e22; }
+        .storm-alert { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; color: #f1c40f; padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
+        .proximity-alert { background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12; color: #e67e22; padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.9em; display: none; font-weight: bold; border-radius: 5px; animation: parpadeo-suave 1s infinite alternate; }
         .proximity-critical { background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b; color: #ff6b6b; }
-        
+        @keyframes parpadeo-suave { from { opacity: 0.8; } to { opacity: 1; } }
+
         .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
+        .leaflet-control-layers { border-radius: 8px; padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+
         #tabla-dinamica { width: 100%; border-collapse: collapse; font-size: 0.85em; color: #333; }
-        #tabla-dinamica th { background: #2c3e50; color: white; padding: 10px; text-align: left; }
+        #tabla-dinamica th { background: #2c3e50; color: white; padding: 10px; text-align: left; position: sticky; top: 0; }
         #tabla-dinamica td { padding: 8px; border-bottom: 1px solid #ddd; }
+        #tabla-dinamica tr:nth-child(even) { background-color: #f2f2f2; }
+        
         #btn-permiso { background: #16a085; font-size:0.7em; margin-bottom:10px; display:none; }
     </style>
 </head>
 <body>
 
-<div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫</div>
+<div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫<br><span style="font-size:0.6em; font-weight:normal;">ZONA ROJA ACTIVADA</span></div>
 
 <button id="menu-toggle" onclick="togglePanel()">☰</button>
 
@@ -93,7 +99,6 @@
 
     <div id="view-voladuras">
         <button id="btn-interferencia" class="btn-alert" onclick="mostrarTablaInterferencias()">🚨 VER POSTES AFECTADOS</button>
-        
         <h4 style="color:#e74c3c">Programación Hoy</h4>
         <div id="lista-voladuras"><em style="font-size:0.7em; color:#7f8c8d;">Cargando...</em></div>
     </div>
@@ -103,16 +108,19 @@
         <h4 style="color:#9b59b6">Generadores Activos</h4>
         <div id="lista-gensets"><em style="font-size:0.7em; color:#7f8c8d;">Sin datos...</em></div>
     </div>
+
     <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
 </div>
 
 <div id="modal-reporte" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:white; width:95%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column;">
+    <div style="background:white; width:95%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
         <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-            <span id="modal-titulo" style="font-weight:bold;">REPORTE</span>
-            <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer;">X</button>
+            <span id="modal-titulo" style="font-weight:bold;">📋 REPORTE</span>
+            <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px;">X</button>
         </div>
-        <div id="contenedor-tabla" style="overflow:auto; padding:0; height:100%; background:white;"></div>
+        <div id="contenedor-tabla" style="overflow:auto; padding:0; height:100%; background:white;">
+            <div style="padding:20px; text-align:center; color:grey;">Cargando...</div>
+        </div>
     </div>
 </div>
 
@@ -122,12 +130,11 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // 🔗 CONFIGURACIÓN DE LINKS
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
 
-    // --- DATA CORREGIDA Y "APLANADA" (Sin anidación extra) ---
+    // --- DATA CORREGIDA (Ya no está anidada) ---
     var datosEnergia = {
       "type": "FeatureCollection",
       "features": [
@@ -140,8 +147,17 @@
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144676, -11.619867 ] }, "properties": { "name": "P2:R1" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144647, -11.619542 ] }, "properties": { "name": "P3:S2" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144552, -11.618566 ] }, "properties": { "name": "P4:R1" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.144659,-11.620110], [-76.144689,-11.620009], [-76.144674,-11.619860], [-76.144641,-11.619535], [-76.144550,-11.618555], [-76.144576,-11.617749]] }, "properties": { "name": "Drv. Antiguo Truck Shop" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142323,-11.621057], [-76.142628,-11.620956], [-76.143304,-11.620664], [-76.144282,-11.620263], [-76.144659,-11.620106]] }, "properties": { "name": "Anillo Mina C1" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.144659,-11.620110], [-76.144689,-11.620009], [-76.144674,-11.619860], [-76.144641,-11.619535], [-76.144550,-11.618555], [-76.144576,-11.617749]] }, "properties": { "name": "Drv. Antiguo Truck Shop", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142323,-11.621057], [-76.142628,-11.620956], [-76.143304,-11.620664], [-76.144282,-11.620263], [-76.144659,-11.620106]] }, "properties": { "name": "Anillo Mina C1", "stroke": "#55ffff" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142324, -11.621025 ] }, "properties": { "name": "P1:A3" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142626, -11.620843 ] }, "properties": { "name": "P2:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142946, -11.620643 ] }, "properties": { "name": "P3:S0" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143476, -11.620224 ] }, "properties": { "name": "P4:A1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143482, -11.619555 ] }, "properties": { "name": "P5:A2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142417, -11.619261 ] }, "properties": { "name": "T6:S0-3C" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.141178, -11.618904 ] }, "properties": { "name": "T7:S0-3C" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.140178, -11.618954 ] }, "properties": { "name": "P6:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.138996, -11.619103 ] }, "properties": { "name": "P7:R1-PIN" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.137913, -11.619143 ] }, "properties": { "name": "P8:DOS POSTES-R1" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.137039, -11.618288 ] }, "properties": { "name": "P-9:DOS POSTES-R1" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.134680, -11.615675 ] }, "properties": { "name": "P13:S0+1 LP" } },
@@ -156,11 +172,22 @@
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.130014, -11.611642 ] }, "properties": { "name": "P19:A2" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129915, -11.609925 ] }, "properties": { "name": "P20:R1" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129857, -11.609093 ] }, "properties": { "name": "P21:A2*" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142327,-11.621024], [-76.142632,-11.620843], [-76.142945,-11.620642], [-76.143475,-11.620225], [-76.143482,-11.619557], [-76.142415,-11.619263], [-76.141176,-11.618905], [-76.140175,-11.618956], [-76.138995,-11.619103], [-76.137911,-11.619143], [-76.137034,-11.618290], [-76.135969,-11.617146], [-76.135784,-11.616920], [-76.135223,-11.616307], [-76.134679,-11.615676], [-76.134532,-11.615523], [-76.134301,-11.615268], [-76.132350,-11.614074], [-76.131300,-11.613201], [-76.130537,-11.612636], [-76.130011,-11.611643], [-76.129915,-11.609930], [-76.129855,-11.609084], [-76.129621,-11.607511], [-76.129519,-11.606821], [-76.129442,-11.606167], [-76.129717,-11.605728], [-76.130488,-11.604624], [-76.130949,-11.604339], [-76.131240,-11.604148], [-76.131421,-11.604021], [-76.131622,-11.603543], [-76.131685,-11.603344], [-76.131666,-11.602948], [-76.131616,-11.602349], [-76.131549,-11.601355], [-76.131724,-11.601336], [-76.132061,-11.600936]] }, "properties": { "name": "Cicuito C1A" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153637, -11.604379 ] }, "properties": { "name": "P21:R1*" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147525, -11.619123 ] }, "properties": { "name": "R" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147544, -11.619178 ] }, "properties": { "name": "S" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147563, -11.619241 ] }, "properties": { "name": "T" } }
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129621, -11.607512 ] }, "properties": { "name": "P22:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129518, -11.606825 ] }, "properties": { "name": "P23:A2*" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129442, -11.606174 ] }, "properties": { "name": "P24:A1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129715, -11.605730 ] }, "properties": { "name": "P25:R1+2 PIN" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.130490, -11.604633 ] }, "properties": { "name": "P26:A1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.130949, -11.604342 ] }, "properties": { "name": "P27:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131240, -11.604151 ] }, "properties": { "name": "P28:R1-PIN" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131423, -11.604024 ] }, "properties": { "name": "P29:R1-PIN" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131623, -11.603544 ] }, "properties": { "name": "P30:R1*+SECC" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131686, -11.603344 ] }, "properties": { "name": "P31:S2*" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131666, -11.602947 ] }, "properties": { "name": "P32:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131618, -11.602350 ] }, "properties": { "name": "P33:S0-1C" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131550, -11.601356 ] }, "properties": { "name": "P34:A1*" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131724, -11.601337 ] }, "properties": { "name": "P35:A2" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142327,-11.621024], [-76.142632,-11.620843], [-76.142945,-11.620642], [-76.143475,-11.620225], [-76.143482,-11.619557], [-76.142415,-11.619263], [-76.141176,-11.618905], [-76.140175,-11.618956], [-76.138995,-11.619103], [-76.137911,-11.619143], [-76.137034,-11.618290], [-76.135969,-11.617146], [-76.135784,-11.616920], [-76.135223,-11.616307], [-76.134679,-11.615676], [-76.134532,-11.615523], [-76.134301,-11.615268], [-76.132350,-11.614074], [-76.131300,-11.613201], [-76.130537,-11.612636], [-76.130011,-11.611643], [-76.129915,-11.609930], [-76.129855,-11.609084], [-76.129621,-11.607511], [-76.129519,-11.606821], [-76.129442,-11.606167], [-76.129717,-11.605728], [-76.130488,-11.604624], [-76.130949,-11.604339], [-76.131240,-11.604148], [-76.131421,-11.604021], [-76.131622,-11.603543], [-76.131685,-11.603344], [-76.131666,-11.602948], [-76.131616,-11.602349], [-76.131549,-11.601355], [-76.131724,-11.601336], [-76.132061,-11.600936]] }, "properties": { "name": "L.3", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.154243, -11.614043 ], [ -76.154943, -11.613021 ], [ -76.153813, -11.612988 ] ] }, "properties": { "name": "L.4", "stroke": "#ffff00" } }
       ]
     };
 
@@ -229,7 +256,7 @@
     var capaTormentas = L.layerGroup().addTo(map);
     var lineaDistancia = L.layerGroup().addTo(map);
 
-    // --- ESTILOS "FANTASMA" (Opacity = 0) ---
+    // --- MODO FANTASMA (Opacidad Cero) ---
     function estiloEnergia(feature) { return { color: feature.properties.stroke || "#f1c40f", weight: 2, opacity: 0, dashArray: '5, 5' }; }
     function estiloPuntos(feature, latlng) { return L.circleMarker(latlng, { radius: 3, fillColor: "#00ffff", color: "#000", weight: 1, opacity: 0, fillOpacity: 0 }); }
 
@@ -261,7 +288,6 @@
             const filas = text.split('\n');
             for (let i = 1; i < filas.length; i++) {
                 const col = filas[i].split(',');
-                // Verifica que existan datos en las columnas 0 y 1
                 if (col.length >= 6 && col[0].trim() !== "") {
                     zonasProgramadas.push({ n: parseFloat(col[0]), e: parseFloat(col[1]), r: parseFloat(col[2]), detalle: col[3], hora: col[4].trim(), dur: parseInt(col[5]) });
                 }
@@ -309,10 +335,7 @@
         const listaDiv = document.getElementById("lista-voladuras");
         const alertaDiv = document.getElementById("radio-silence-alert");
         listaDiv.innerHTML = ""; capaVoladuras.clearLayers(); 
-        let haySilencioRadial = false; 
-        
-        // Reiniciamos Zonas Activas para recalcular
-        zonasActivasAhora = [];
+        let haySilencioRadial = false; zonasActivasAhora = [];
 
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
@@ -332,7 +355,6 @@
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
-                    // Agregamos a la lista activa para verificación de interferencias
                     if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
@@ -348,17 +370,13 @@
         alertaDiv.style.display = haySilencioRadial ? "block" : "none";
         if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
         if (miPosicion) chequearProximidadVoladura();
-        
-        // Ejecutar Detector de Postes
         verificarInterferencias(); 
     }
 
-    // --- DETECTOR DE INTERFERENCIAS (Postes vs Voladura) ---
     function verificarInterferencias() {
-        postesAfectados = []; // Resetear lista
-
-        // 1. Reset: Apagar todo primero
+        postesAfectados = []; 
         capaEnergia.eachLayer(function(layer) {
+            // Resetear al modo fantasma (invisible)
             if (layer instanceof L.CircleMarker) { layer.setStyle({ fillColor: "#00ffff", color: "#000", radius: 3, opacity: 0, fillOpacity: 0 }); } 
             else if (layer instanceof L.Polyline) { layer.setStyle({ color: layer.feature.properties.stroke || "#f1c40f", weight: 2, dashArray: '5, 5', opacity: 0 }); }
         });
@@ -368,18 +386,13 @@
         zonasActivasAhora.forEach(zona => {
             capaEnergia.eachLayer(function(layer) {
                 let afectado = false;
-                
-                // Si es un Punto (Poste)
                 if (layer instanceof L.CircleMarker) {
                     if (map.distance(layer.getLatLng(), zona.center) <= zona.radius) afectado = true;
-                } 
-                // Si es una Línea (Cable)
-                else if (layer instanceof L.Polyline) {
+                } else if (layer instanceof L.Polyline) {
                     let puntos = layer.getLatLngs().flat ? layer.getLatLngs().flat(99) : layer.getLatLngs(); 
                     for (let p of puntos) { if (map.distance(p, zona.center) <= zona.radius) { afectado = true; break; } }
                 }
 
-                // 3. Encender si está afectado
                 if (afectado) {
                     postesAfectados.push({ nombre: layer.feature.properties.name || "Sin Nombre", estado: "⚠️ " + zona.name });
                     if (layer instanceof L.CircleMarker) {
