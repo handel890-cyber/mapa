@@ -7,7 +7,7 @@
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        /* ESTILOS GENERALES */
+        /* --- ESTILOS BASE --- */
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
         #map { height: 100%; width: 100%; z-index: 1; }
         
@@ -26,12 +26,22 @@
         
         button { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
         button:active { transform: scale(0.98); }
+        
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
         
-        /* BOTONES DE REPORTE */
+        /* BOTÓN REPORTE GENSETS (Naranja) */
         .btn-report { background: #d35400; color: white; border: 1px solid #e67e22; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        .btn-alert { background: #c0392b; color: white; border: 1px solid #e74c3c; margin-bottom: 10px; animation: parpadeo-suave 1s infinite alternate; display: none; }
+        
+        /* BOTÓN ALERTA POSTES (Rojo Parpadeante) */
+        .btn-alert { 
+            background: #c0392b; color: white; 
+            border: 2px solid #e74c3c; margin-bottom: 15px; 
+            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+            animation: parpadeo-boton 1s infinite alternate; 
+            display: none; 
+        }
+        @keyframes parpadeo-boton { from { opacity: 1; } to { opacity: 0.8; transform: scale(0.98); } }
 
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
@@ -45,16 +55,9 @@
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
 
-        .genset-marker {
-            background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black;
-            display: flex; align-items: center; justify-content: center;
-        }
+        .genset-marker { background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black; display: flex; align-items: center; justify-content: center; }
         .genset-marker svg { width: 18px; height: 18px; fill: white; }
-
         .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
-        .tabla-info { width: 100%; border-collapse: collapse; margin-top: 5px; font-size: 0.9em; }
-        .tabla-info td { padding: 3px 5px; border-bottom: 1px solid #eee; }
-        .tabla-info td:first-child { font-weight: bold; color: #555; }
 
         #radio-silence-alert { position: absolute; bottom: 30px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate; }
         @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
@@ -101,7 +104,7 @@
     <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
 
     <div id="view-voladuras">
-        <button id="btn-interferencia" class="btn-alert" onclick="mostrarTablaInterferencias()">⚠️ VER POSTES AFECTADOS</button>
+        <button id="btn-interferencia" class="btn-alert" onclick="mostrarTablaInterferencias()">🚨 VER POSTES AFECTADOS</button>
         
         <h4 style="color:#e74c3c">Programación Hoy</h4>
         <div id="lista-voladuras"><em style="font-size:0.7em; color:#7f8c8d;">Cargando...</em></div>
@@ -141,8 +144,7 @@
 
     // --- DATA: LÍNEAS ELÉCTRICAS ---
     var datosEnergia = {
-      "type": "FeatureCollection",
-      "features": [
+      "type": "FeatureCollection", "features": [
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14465922206212, -11.62011178650611, 0 ] }, "properties": { "name": "P4:R1-DT" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.14428380962211, -11.62026698905186, 0 ] }, "properties": { "name": "P3:R1-DT" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.1433040590863, -11.62066871973589, 0 ] }, "properties": { "name": "P2A:R1-DT" } },
@@ -195,10 +197,7 @@
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13161857257168, -11.6023504878965, 0 ] }, "properties": { "name": "P33:S0-1C" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13155036707604, -11.60135613418573, 0 ] }, "properties": { "name": "P34:A1*" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13172454566195, -11.60133736801021, 0 ] }, "properties": { "name": "P35:A2" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232243002964, -11.62101788009237, 0 ], [ -76.14262816789747, -11.62083937577406, 0 ], [ -76.14295048827718, -11.62063778566179, 0 ], [ -76.14347810712016, -11.62021936332017, 0 ], [ -76.14348529261056, -11.61954696892582, 0 ], [ -76.14241716385524, -11.61925800797873, 0 ], [ -76.14117745382681, -11.61889723438726, 0 ], [ -76.14017912506424, -11.61894787953184, 0 ], [ -76.13899519333019, -11.61909741277658, 0 ], [ -76.13791487509232, -11.61913773370697, 0 ], [ -76.137034605834, -11.61828360618312, 0 ], [ -76.1359685883636, -11.6171297162255, 0 ], [ -76.13578864011846, -11.61691339089228, 0 ], [ -76.1352246178304, -11.61629599275212, 0 ], [ -76.13466998336904, -11.61566702485515, 0 ], [ -76.13453494654989, -11.61551616373398, 0 ], [ -76.1342981969752, -11.61526074060272, 0 ], [ -76.13235087843216, -11.61406116543134, 0 ], [ -76.13130386844183, -11.61319606838499, 0 ], [ -76.13054438315093, -11.61263010714936, 0 ], [ -76.13000350947799, -11.61163132580327, 0 ], [ -76.12991074256459, -11.60991837489728, 0 ], [ -76.12985517543586, -11.60908491592153, 0 ], [ -76.12961819643117, -11.60750350103111, 0 ], [ -76.12951910179723, -11.60682163969981, 0 ], [ -76.12944226884845, -11.60616771719789, 0 ], [ -76.12971724565614, -11.60572828987408, 0 ], [ -76.13048851811374, -11.60462411582702, 0 ], [ -76.13094975819574, -11.60433978163304, 0 ], [ -76.13124068848732, -11.60414876537653, 0 ], [ -76.13142179047836, -11.60402171775137, 0 ], [ -76.13162242604226, -11.60354374781281, 0 ], [ -76.13168587566885, -11.60334447852337, 0 ], [ -76.13166645642411, -11.60294843772323, 0 ], [ -76.13161672644422, -11.60234984841893, 0 ], [ -76.1315492400745, -11.60135552313515, 0 ], [ -76.13172482209501, -11.60133632900435, 0 ], [ -76.13206130035621, -11.60093631450834, 0 ] ] }, "properties": { "name": "Cicuito C1A", "stroke": "#0000ff" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13136864475558, -11.61315666222933, 0 ] }, "properties": { "name": "Tree Way 110 DS 009" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.13155918375872, -11.60354426541969, 0 ] }, "properties": { "name": "110 DS 021" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232712242561, -11.62102416069766, 0 ], [ -76.14263208631986, -11.62084322953728, 0 ], [ -76.1429451528137, -11.62064247778055, 0 ], [ -76.14347515992557, -11.62022597491979, 0 ], [ -76.14348220026501, -11.61955767292041, 0 ], [ -76.1424157882472, -11.6192631631229, 0 ], [ -76.1411766077194, -11.61890528420217, 0 ], [ -76.14017599548181, -11.61895605405651, 0 ], [ -76.13899573811955, -11.61910301550125, 0 ], [ -76.13791179835225, -11.61914371086025, 0 ], [ -76.1370343419892, -11.61829058035264, 0 ], [ -76.13596941121645, -11.61714641483917, 0 ], [ -76.13578452748993, -11.61692098667978, 0 ], [ -76.13522368417306, -11.6163076967941, 0 ], [ -76.13467911071925, -11.61567616961192, 0 ], [ -76.13453282118776, -11.61552392950376, 0 ], [ -76.13430130694962, -11.61526836185344, 0 ], [ -76.13235087843216, -11.61407478910492, 0 ], [ -76.13130085427515, -11.61320158202054, 0 ], [ -76.13053743466156, -11.61263619654127, 0 ], [ -76.13001122578194, -11.61164361103586, 0 ], [ -76.12991553164798, -11.60993041148236, 0 ], [ -76.12985548272054, -11.60909352424326, 0 ], [ -76.12962124787109, -11.60751146974269, 0 ], [ -76.1295169494598, -11.6068254823038, 0 ], [ -76.12944101162222, -11.60617477753675, 0 ], [ -76.12971480663839, -11.6057311512346, 0 ], [ -76.13048851811374, -11.60463321405557, 0 ], [ -76.1309465623298, -11.60434219408339, 0 ], [ -76.13124020171531, -11.60414876537653, 0 ], [ -76.13142179047836, -11.60402171775137, 0 ], [ -76.13162242604226, -11.60354357411542, 0 ], [ -76.13168587566885, -11.60334447852337, 0 ], [ -76.13166645642411, -11.60294843772323, 0 ], [ -76.13161672644422, -11.60234984841893, 0 ], [ -76.1315492400745, -11.60135552313515, 0 ], [ -76.13172482209501, -11.60133632900435, 0 ], [ -76.13206130035621, -11.60093631450834, 0 ] ] }, "properties": { "name": "L.3", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.14232243002964, -11.62101788009237, 0 ], [ -76.14262816789747, -11.62083937577406, 0 ], [ -76.14295048827718, -11.62063778566179, 0 ], [ -76.14347810712016, -11.62021936332017, 0 ], [ -76.14348529261056, -11.61954696892582, 0 ], [ -76.14241716385524, -11.61925800797873, 0 ], [ -76.14117745382681, -11.61889723438726, 0 ], [ -76.14017912506424, -11.61894787953184, 0 ], [ -76.13899519333019, -11.61909741277658, 0 ], [ -76.13791487509232, -11.61913773370697, 0 ], [ -76.137034605834, -11.61828360618312, 0 ], [ -76.1359685883636, -11.6171297162255, 0 ], [ -76.13578864011846, -11.61691339089228, 0 ], [ -76.1352246178304, -11.61629599275212, 0 ], [ -76.13466998336904, -11.61566702485515, 0 ], [ -76.13453494654989, -11.61551616373398, 0 ], [ -76.13430130694962, -11.61526836185344, 0 ], [ -76.13235087843216, -11.61407478910492, 0 ], [ -76.13130085427515, -11.61319606838499, 0 ], [ -76.13054438315093, -11.61263010714936, 0 ], [ -76.13001122578194, -11.61164361103586, 0 ], [ -76.12991074256459, -11.60991837489728, 0 ], [ -76.12985517543586, -11.60908491592153, 0 ], [ -76.12961819643117, -11.60750350103111, 0 ], [ -76.12951910179723, -11.60682163969981, 0 ], [ -76.12944226884845, -11.60616771719789, 0 ], [ -76.12971724565614, -11.60572828987408, 0 ], [ -76.13048851811374, -11.60462411582702, 0 ], [ -76.13094975819574, -11.60433978163304, 0 ], [ -76.13124068848732, -11.60414876537653, 0 ], [ -76.13142179047836, -11.60402171775137, 0 ], [ -76.13162242604226, -11.60354357411542, 0 ], [ -76.13168587566885, -11.60334447852337, 0 ], [ -76.13166645642411, -11.60294843772323, 0 ], [ -76.13161672644422, -11.60234984841893, 0 ], [ -76.1315492400745, -11.60135552313515, 0 ], [ -76.13172482209501, -11.60133632900435, 0 ], [ -76.13206130035621, -11.60093631450834, 0 ] ] }, "properties": { "name": "L.3", "stroke": "#ffff00" } },
         { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.15424372829537, -11.61404305687519, 0 ], [ -76.15494384739594, -11.61302138012434, 0 ], [ -76.15381312655518, -11.61298898320669, 0 ] ] }, "properties": { "name": "L.4", "stroke": "#ffff00" } }
       ]
     };
@@ -424,6 +423,7 @@
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
+                    // IMPORTANTE: Agregamos tanto ROJAS como NARANJAS a la lista de chequeo
                     if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
@@ -440,6 +440,8 @@
         if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
         
         if (miPosicion) chequearProximidadVoladura();
+        
+        // Ejecutar detector
         verificarInterferencias(); 
     }
 
@@ -463,47 +465,43 @@
 
         // 2. Buscar conflictos
         zonasActivasAhora.forEach(zona => {
-            if(zona.type === "red") {
-                capaEnergia.eachLayer(function(layer) {
-                    let afectado = false;
-                    // Puntos
+            capaEnergia.eachLayer(function(layer) {
+                let afectado = false;
+                // Puntos
+                if (layer instanceof L.CircleMarker) {
+                    if (map.distance(layer.getLatLng(), zona.center) <= zona.radius) afectado = true;
+                }
+                // Líneas
+                else if (layer instanceof L.Polyline) {
+                    let puntos = layer.getLatLngs().flat ? layer.getLatLngs().flat(99) : layer.getLatLngs(); 
+                    for (let p of puntos) {
+                        if (map.distance(p, zona.center) <= zona.radius) { afectado = true; break; }
+                    }
+                }
+
+                if (afectado) {
+                    postesAfectados.push({
+                        nombre: layer.feature.properties.name || "Sin Nombre",
+                        estado: "⚠️ " + zona.name
+                    });
+
+                    // Pintar ROJO INTENSO (Mismo tamaño)
                     if (layer instanceof L.CircleMarker) {
-                        if (map.distance(layer.getLatLng(), zona.center) <= zona.radius) afectado = true;
+                        layer.setStyle({ fillColor: "red", color: "white", radius: 3, weight: 2, opacity: 1, fillOpacity: 1 });
+                        layer.bindPopup("🚨 <b>¡AFECTADO!</b><br>" + (layer.feature.properties.name || "Sin nombre"));
+                    } else {
+                        layer.setStyle({ color: "red", weight: 4, dashArray: null, opacity: 1 });
                     }
-                    // Líneas
-                    else if (layer instanceof L.Polyline) {
-                        let puntos = layer.getLatLngs().flat ? layer.getLatLngs().flat(99) : layer.getLatLngs(); 
-                        for (let p of puntos) {
-                            if (map.distance(p, zona.center) <= zona.radius) { afectado = true; break; }
-                        }
-                    }
-
-                    if (afectado) {
-                        // Guardar en la lista para el reporte
-                        postesAfectados.push({
-                            nombre: layer.feature.properties.name || "Sin Nombre",
-                            estado: "⚠️ En radio de: " + zona.name
-                        });
-
-                        // Pintar ROJO INTENSO (Mismo tamaño)
-                        if (layer instanceof L.CircleMarker) {
-                            layer.setStyle({ fillColor: "red", color: "white", radius: 3, weight: 2, opacity: 1, fillOpacity: 1 });
-                            layer.bindPopup("🚨 <b>¡AFECTADO POR VOLADURA!</b><br>" + (layer.feature.properties.name || "Sin nombre"));
-                        } else {
-                            layer.setStyle({ color: "red", weight: 4, dashArray: null, opacity: 1 });
-                        }
-                    }
-                });
-            }
+                }
+            });
         });
 
         // 3. Mostrar botón si hay problemas
         var btnAlert = document.getElementById('btn-interferencia');
         if (postesAfectados.length > 0) {
             btnAlert.style.display = 'block';
-            btnAlert.innerText = `⚠️ ${postesAfectados.length} INTERFERENCIAS`;
-            // Enviar notificación solo una vez
-            enviarNotificacion("ALERTA CRÍTICA", `Se detectaron ${postesAfectados.length} postes/cables en zona de voladura.`);
+            btnAlert.innerText = `🚨 VER ${postesAfectados.length} POSTES AFECTADOS`;
+            enviarNotificacion("ALERTA", `Se detectaron ${postesAfectados.length} interferencias.`);
         } else {
             btnAlert.style.display = 'none';
         }
