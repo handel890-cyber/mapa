@@ -26,12 +26,9 @@
         
         button { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
         button:active { transform: scale(0.98); }
-        
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
         .btn-report { background: #d35400; color: white; border: 1px solid #e67e22; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        
-        /* BOTÓN ALERTA POSTES (ROJO) */
         .btn-alert { 
             background: #c0392b; color: white; 
             border: 2px solid #e74c3c; margin-bottom: 15px; 
@@ -48,7 +45,6 @@
         .list-item { background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
-
         .genset-marker { background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black; display: flex; align-items: center; justify-content: center; }
         .genset-marker svg { width: 18px; height: 18px; fill: white; }
         .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
@@ -57,26 +53,23 @@
         @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
         
         #reloj-sistema { font-family: monospace; color: #f1c40f; text-align: center; font-size: 1.2em; margin-bottom: 10px; border: 1px solid #555; padding: 5px; background: rgba(0,0,0,0.3); }
-        .storm-alert { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; color: #f1c40f; padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
-        .proximity-alert { background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12; color: #e67e22; padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.9em; display: none; font-weight: bold; border-radius: 5px; animation: parpadeo-suave 1s infinite alternate; }
+        .storm-alert, .proximity-alert { padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
+        .storm-alert { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; color: #f1c40f; }
+        .proximity-alert { background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12; color: #e67e22; }
         .proximity-critical { background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b; color: #ff6b6b; }
-        @keyframes parpadeo-suave { from { opacity: 0.8; } to { opacity: 1; } }
-
         .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
-        .leaflet-control-layers { border-radius: 8px; padding: 5px; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
-
+        
         #tabla-dinamica { width: 100%; border-collapse: collapse; font-size: 0.85em; color: #333; }
         #tabla-dinamica th { background: #2c3e50; color: white; padding: 10px; text-align: left; position: sticky; top: 0; }
         #tabla-dinamica td { padding: 8px; border-bottom: 1px solid #ddd; }
         #tabla-dinamica tr:nth-child(even) { background-color: #f2f2f2; }
-        
         #btn-permiso { background: #16a085; font-size:0.7em; margin-bottom:10px; display:none; }
     </style>
 </head>
 <body>
 
-<div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫<br><span style="font-size:0.6em; font-weight:normal;">ZONA ROJA ACTIVADA</span></div>
+<div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫</div>
 
 <button id="menu-toggle" onclick="togglePanel()">☰</button>
 
@@ -108,7 +101,6 @@
         <h4 style="color:#9b59b6">Generadores Activos</h4>
         <div id="lista-gensets"><em style="font-size:0.7em; color:#7f8c8d;">Sin datos...</em></div>
     </div>
-
     <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
 </div>
 
@@ -134,10 +126,11 @@
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
 
-    // --- DATA CORREGIDA (Ya no está anidada) ---
+    // --- DATA CORREGIDA Y APLANADA ---
     var datosEnergia = {
       "type": "FeatureCollection",
       "features": [
+        // PUNTOS (POSTES)
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144659, -11.620111 ] }, "properties": { "name": "P4:R1-DT" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144283, -11.620266 ] }, "properties": { "name": "P3:R1-DT" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143304, -11.620668 ] }, "properties": { "name": "P2A:R1-DT" } },
@@ -147,8 +140,10 @@
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144676, -11.619867 ] }, "properties": { "name": "P2:R1" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144647, -11.619542 ] }, "properties": { "name": "P3:S2" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144552, -11.618566 ] }, "properties": { "name": "P4:R1" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.144659,-11.620110], [-76.144689,-11.620009], [-76.144674,-11.619860], [-76.144641,-11.619535], [-76.144550,-11.618555], [-76.144576,-11.617749]] }, "properties": { "name": "Drv. Antiguo Truck Shop", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142323,-11.621057], [-76.142628,-11.620956], [-76.143304,-11.620664], [-76.144282,-11.620263], [-76.144659,-11.620106]] }, "properties": { "name": "Anillo Mina C1", "stroke": "#55ffff" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144790, -11.618510 ] }, "properties": { "name": "P cable desconectado" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145440, -11.618381 ] }, "properties": { "name": "P" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144576, -11.617752 ] }, "properties": { "name": "P5 Secc: A3" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144677, -11.620030 ] }, "properties": { "name": "110 DS 008" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142324, -11.621025 ] }, "properties": { "name": "P1:A3" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142626, -11.620843 ] }, "properties": { "name": "P2:R1" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142946, -11.620643 ] }, "properties": { "name": "P3:S0" } },
@@ -186,8 +181,78 @@
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131618, -11.602350 ] }, "properties": { "name": "P33:S0-1C" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131550, -11.601356 ] }, "properties": { "name": "P34:A1*" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131724, -11.601337 ] }, "properties": { "name": "P35:A2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142324, -11.621097 ] }, "properties": { "name": "P1: A3" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153637, -11.604379 ] }, "properties": { "name": "P21:R1*" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142626, -11.620960 ] }, "properties": { "name": "P2:R1-DT" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143304, -11.620668 ] }, "properties": { "name": "P2A:R1-DT" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144283, -11.620266 ] }, "properties": { "name": "P3:R1-DT" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144659, -11.620111 ] }, "properties": { "name": "P4:R1-DT" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145126, -11.619947 ] }, "properties": { "name": "P5:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145850, -11.619745 ] }, "properties": { "name": "P6:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147525, -11.619123 ] }, "properties": { "name": "R" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147544, -11.619178 ] }, "properties": { "name": "S" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147563, -11.619241 ] }, "properties": { "name": "T" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151730, -11.617777 ] }, "properties": { "name": "R" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151748, -11.617814 ] }, "properties": { "name": "S" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151776, -11.617850 ] }, "properties": { "name": "T" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153489, -11.612815 ] }, "properties": { "name": "P15:A2+JUMPER" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147415, -11.619051 ] }, "properties": { "name": "P7A RST" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147571, -11.619159 ] }, "properties": { "name": "P7 RST" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151721, -11.617823 ] }, "properties": { "name": "P8 RST:A2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153559, -11.612119 ] }, "properties": { "name": "P16:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153630, -11.611513 ] }, "properties": { "name": "T" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153584, -11.611513 ] }, "properties": { "name": "S" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153529, -11.611513 ] }, "properties": { "name": "R" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153609, -11.610916 ] }, "properties": { "name": "T" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153563, -11.610916 ] }, "properties": { "name": "S" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153518, -11.610907 ] }, "properties": { "name": "R" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153538, -11.606848 ] }, "properties": { "name": "T18:TR1+JUMPER" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153830, -11.606629 ] }, "properties": { "name": "P19:A2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153923, -11.604694 ] }, "properties": { "name": "P20:A2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.152513, -11.603117 ] }, "properties": { "name": "P22:A2" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151000, -11.603078 ] }, "properties": { "name": "P23:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148982, -11.603023 ] }, "properties": { "name": "P25:R1**" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.149386, -11.603030 ] }, "properties": { "name": "P24:R1" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148192, -11.602728 ] }, "properties": { "name": "P26:A2-LP" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147433, -11.619006 ] }, "properties": { "name": "ST" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147452, -11.619033 ] }, "properties": { "name": "R" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153584, -11.611549 ] }, "properties": { "name": "P17 RST:A2+JUMPER" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153490, -11.610971 ] }, "properties": { "name": "P17A RST:S0-3C" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153601, -11.604397 ] }, "properties": { "name": "110 DS 016" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153445, -11.606676 ] }, "properties": { "name": "P18A THREE WAY" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.152499, -11.617494 ] }, "properties": { "name": "P.09" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.152918, -11.616869 ] }, "properties": { "name": "P.10" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153319, -11.616062 ] }, "properties": { "name": "P.11" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153701, -11.615310 ] }, "properties": { "name": "P.12" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.154019, -11.614613 ] }, "properties": { "name": "P.13" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.154273, -11.614051 ] }, "properties": { "name": "P.14" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.154957, -11.613036 ] }, "properties": { "name": "P.14A" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153820, -11.612995 ] }, "properties": { "name": "P.14B" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.154847, -11.613081 ] }, "properties": { "name": "P.14A" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153645, -11.612987 ] }, "properties": { "name": "P.14C" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153498, -11.612824 ] }, "properties": { "name": "P.15" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148338, -11.602573 ] }, "properties": { "name": "P.25_S" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148375, -11.602546 ] }, "properties": { "name": "P.25_R" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148293, -11.602628 ] }, "properties": { "name": "P.25_T" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145870, -11.599970 ] }, "properties": { "name": "P.26_R" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145842, -11.599988 ] }, "properties": { "name": "P.26_S" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145796, -11.599997 ] }, "properties": { "name": "P.26_T" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145482, -11.599248 ] }, "properties": { "name": "P.27" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144392, -11.597372 ] }, "properties": { "name": "P.28" } },
+        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142418, -11.596819 ] }, "properties": { "name": "P.29" } },
+        // LÍNEAS (CABLES)
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.144659,-11.620110], [-76.144689,-11.620009], [-76.144674,-11.619860], [-76.144641,-11.619535], [-76.144550,-11.618555], [-76.144576,-11.617749]] }, "properties": { "name": "Drv. Antiguo Truck Shop", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142323,-11.621057], [-76.142628,-11.620956], [-76.143304,-11.620664], [-76.144282,-11.620263], [-76.144659,-11.620106]] }, "properties": { "name": "Anillo Mina C1", "stroke": "#55ffff" } },
         { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142327,-11.621024], [-76.142632,-11.620843], [-76.142945,-11.620642], [-76.143475,-11.620225], [-76.143482,-11.619557], [-76.142415,-11.619263], [-76.141176,-11.618905], [-76.140175,-11.618956], [-76.138995,-11.619103], [-76.137911,-11.619143], [-76.137034,-11.618290], [-76.135969,-11.617146], [-76.135784,-11.616920], [-76.135223,-11.616307], [-76.134679,-11.615676], [-76.134532,-11.615523], [-76.134301,-11.615268], [-76.132350,-11.614074], [-76.131300,-11.613201], [-76.130537,-11.612636], [-76.130011,-11.611643], [-76.129915,-11.609930], [-76.129855,-11.609084], [-76.129621,-11.607511], [-76.129519,-11.606821], [-76.129442,-11.606167], [-76.129717,-11.605728], [-76.130488,-11.604624], [-76.130949,-11.604339], [-76.131240,-11.604148], [-76.131421,-11.604021], [-76.131622,-11.603543], [-76.131685,-11.603344], [-76.131666,-11.602948], [-76.131616,-11.602349], [-76.131549,-11.601355], [-76.131724,-11.601336], [-76.132061,-11.600936]] }, "properties": { "name": "L.3", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.154243, -11.614043 ], [ -76.154943, -11.613021 ], [ -76.153813, -11.612988 ] ] }, "properties": { "name": "L.4", "stroke": "#ffff00" } }
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.154243, -11.614043 ], [ -76.154943, -11.613021 ], [ -76.153813, -11.612988 ] ] }, "properties": { "name": "L.4", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.145848, -11.619735 ], [ -76.147563, -11.619237 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.145848, -11.619737 ], [ -76.147525, -11.619123 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147454, -11.619027 ], [ -76.151777, -11.617845 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147435, -11.619002 ], [ -76.151725, -11.617773 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147565, -11.619239 ], [ -76.147433, -11.619003 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147542, -11.619174 ], [ -76.147436, -11.619004 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147525, -11.619121 ], [ -76.147454, -11.619027 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
+        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147446, -11.619015 ], [ -76.151752, -11.617813 ], [ -76.152530, -11.617488 ], [ -76.151796, -11.617850 ], [ -76.151727, -11.617770 ], [ -76.152528, -11.617487 ], [ -76.152888, -11.616857 ], [ -76.153288, -11.616053 ], [ -76.153673, -11.615291 ], [ -76.153990, -11.614599 ], [ -76.154244, -11.614024 ], [ -76.154872, -11.613074 ], [ -76.153822, -11.612995 ], [ -76.153669, -11.612983 ], [ -76.153517, -11.612819 ], [ -76.153572, -11.612118 ], [ -76.153649, -11.611508 ], [ -76.153600, -11.610908 ], [ -76.153566, -11.606864 ], [ -76.153564, -11.612114 ], [ -76.153534, -11.611510 ], [ -76.153537, -11.610900 ], [ -76.153559, -11.606853 ], [ -76.153878, -11.606607 ], [ -76.153940, -11.604695 ], [ -76.153657, -11.604373 ], [ -76.152543, -11.603112 ], [ -76.151035, -11.603073 ], [ -76.149438, -11.603026 ], [ -76.148371, -11.602547 ], [ -76.145877, -11.599959 ], [ -76.145487, -11.599240 ], [ -76.145845, -11.599973 ], [ -76.148331, -11.602575 ], [ -76.149437, -11.603027 ], [ -76.148293, -11.602627 ], [ -76.145798, -11.599981 ], [ -76.145487, -11.599242 ], [ -76.144399, -11.597333 ], [ -76.142420, -11.596797 ] ] }, "properties": { "name": "L.3", "stroke": "#ffff00" } }
       ]
     };
 
@@ -256,9 +321,9 @@
     var capaTormentas = L.layerGroup().addTo(map);
     var lineaDistancia = L.layerGroup().addTo(map);
 
-    // --- MODO FANTASMA (Opacidad Cero) ---
-    function estiloEnergia(feature) { return { color: feature.properties.stroke || "#f1c40f", weight: 2, opacity: 0, dashArray: '5, 5' }; }
-    function estiloPuntos(feature, latlng) { return L.circleMarker(latlng, { radius: 3, fillColor: "#00ffff", color: "#000", weight: 1, opacity: 0, fillOpacity: 0 }); }
+    // --- MODO FANTASMA (Líneas grises muy tenues, casi invisibles) ---
+    function estiloEnergia(feature) { return { color: "#999", weight: 1, opacity: 0.1, dashArray: '5, 5' }; }
+    function estiloPuntos(feature, latlng) { return L.circleMarker(latlng, { radius: 2, fillColor: "#ccc", color: "#000", weight: 0.5, opacity: 0.1, fillOpacity: 0.1 }); }
 
     var capaEnergia = L.geoJSON(datosEnergia, {
         style: estiloEnergia,
@@ -339,7 +404,10 @@
 
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
-            const [hh, mm] = zona.hora.split(':');
+            // Limpieza de hora (ignora segundos y espacios)
+            const horaLimpia = zona.hora.trim().substring(0, 5); 
+            const [hh, mm] = horaLimpia.split(':');
+            
             const fechaInicio = new Date(); fechaInicio.setHours(hh, mm, 0);
             const fechaFin = new Date(fechaInicio.getTime() + zona.dur * 60000);
             let estadoTexto = ""; let colorBorde = ""; let colorMapa = ""; let dibujar = false; let esPeligroso = false;
@@ -355,6 +423,7 @@
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
+                    // Agregamos tanto ROJAS como NARANJAS a la lista de chequeo
                     if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
@@ -376,9 +445,9 @@
     function verificarInterferencias() {
         postesAfectados = []; 
         capaEnergia.eachLayer(function(layer) {
-            // Resetear al modo fantasma (invisible)
-            if (layer instanceof L.CircleMarker) { layer.setStyle({ fillColor: "#00ffff", color: "#000", radius: 3, opacity: 0, fillOpacity: 0 }); } 
-            else if (layer instanceof L.Polyline) { layer.setStyle({ color: layer.feature.properties.stroke || "#f1c40f", weight: 2, dashArray: '5, 5', opacity: 0 }); }
+            // Resetear al modo fantasma (casi invisible)
+            if (layer instanceof L.CircleMarker) { layer.setStyle({ fillColor: "#ccc", color: "#000", radius: 2, weight: 0.5, opacity: 0.1, fillOpacity: 0.1 }); } 
+            else if (layer instanceof L.Polyline) { layer.setStyle({ color: "#999", weight: 1, opacity: 0.1, dashArray: '5, 5' }); }
         });
 
         if (zonasActivasAhora.length === 0) { document.getElementById('btn-interferencia').style.display = 'none'; return; }
