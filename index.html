@@ -37,11 +37,11 @@
         .btn-alert { 
             background: #c0392b; color: white; 
             border: 2px solid #e74c3c; margin-bottom: 15px; 
-            box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
+            box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
             animation: parpadeo-boton 1s infinite alternate; 
             display: none; 
         }
-        @keyframes parpadeo-boton { from { opacity: 1; } to { opacity: 0.8; transform: scale(0.98); } }
+        @keyframes parpadeo-boton { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(0.98); } }
 
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
         .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
@@ -137,7 +137,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
-    // 🔗 ENLACES DE DATOS
+    // 🔗 ENLACES DE DATOS (Asegúrate de que sean tus Links CSV)
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
@@ -423,7 +423,7 @@
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
-                    // IMPORTANTE: Agregamos tanto ROJAS como NARANJAS a la lista de chequeo
+                    // Agregamos tanto ROJAS como NARANJAS a la lista de chequeo
                     if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
