@@ -140,7 +140,7 @@
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
 
     // ⚠️ REEMPLAZA ESTO CON LA URL QUE GENERASTE EN TU APPS SCRIPT AL HACER "NUEVA IMPLEMENTACIÓN"
-    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycby4yStrPOJqYGVs_L0o3o5goYqDl2EwgLOvmZ-GpRtew48ndz6wP7g_H4VjFKjzXn_6qQ/exec";
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwXOY3ilI2bv6ffdiU90BFn8AAXN0xwEYojPG0-v9PD_dXi98JpY64qvcVtilu7hfIxhw/exec";
 
     // --- DATA CORREGIDA Y APLANADA ---
     var datosEnergia = {
@@ -362,7 +362,8 @@
         var btn = document.querySelector(".btn-sync");
         btn.innerHTML = "⏳ CARGANDO...";
         try {
-            const response = await fetch(LINK_VOLADURAS + '&t=' + Date.now());
+            // Reemplaza la línea del fetch por esta:
+		const response = await fetch(LINK_VOLADURAS + '&t=' + Date.now(), { cache: 'no-store', pragma: 'no-cache' });
             const text = await response.text();
             zonasProgramadas = [];
             const filas = text.split('\n');
@@ -382,7 +383,8 @@
     async function cargarGensets() {
         if (!LINK_GENSETS.startsWith("http")) return; 
         try {
-            const response = await fetch(LINK_GENSETS + '&t=' + Date.now());
+            // Reemplaza la línea del fetch por esta:
+		const response = await fetch(LINK_GENSETS + '&t=' + Date.now(), { cache: 'no-store', pragma: 'no-cache' });
             const text = await response.text();
             const filas = text.split('\n');
             capaGensets.clearLayers();
