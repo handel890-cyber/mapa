@@ -1254,20 +1254,49 @@
         let btnReg = document.getElementById("btn-registrar");
         btnReg.innerText = "⏳ ENVIANDO...";
 
-        let urlCompleta = `${URL_APPS_SCRIPT}?norte=${norte}&este=${este}&nombre=${encodeURIComponent(nombreGenset)}`;
+        // ---------------------------------------------------------
+        // MÉTODO INFALIBLE: FORMULARIO OCULTO (Bypass CORS y File://)
+        // ---------------------------------------------------------
+        
+        // 1. Crear un iframe invisible en el HTML (si no existe)
+        let iframe = document.getElementById("hidden_iframe");
+        if (!iframe) {
+            iframe = document.createElement("iframe");
+            iframe.name = "hidden_iframe";
+            iframe.id = "hidden_iframe";
+            iframe.style.display = "none";
+            document.body.appendChild(iframe);
+        }
 
-        fetch(urlCompleta)
-        .then(response => response.text())
-        .then(data => {
-            alert(`✅ Ubicación de ${nombreGenset} actualizada en tu Google Sheet con éxito.`);
+        // 2. Crear un formulario invisible
+        let form = document.createElement("form");
+        form.action = URL_APPS_SCRIPT;
+        form.method = "GET"; 
+        form.target = "hidden_iframe"; // Enviar la respuesta de Google al iframe oculto
+        form.style.display = "none";
+
+        // 3. Crear los inputs con los datos
+        let inputNorte = document.createElement("input"); inputNorte.name = "norte"; inputNorte.value = norte; form.appendChild(inputNorte);
+        let inputEste = document.createElement("input"); inputEste.name = "este"; inputEste.value = este; form.appendChild(inputEste);
+        let inputNombre = document.createElement("input"); inputNombre.name = "nombre"; inputNombre.value = nombreGenset; form.appendChild(inputNombre);
+
+        document.body.appendChild(form);
+
+        // 4. Qué hacer cuando Google termine de procesar el iframe
+        iframe.onload = function() {
+            alert(`✅ Ubicación de ${nombreGenset} enviada con éxito.`);
             btnReg.innerText = "🔋 GUARDAR UBICACIÓN AQUÍ";
-            selectGenset.value = ""; // Limpiar la selección
-            cargarGensets(); // Refrescar el mapa y la lista
-        })
-        .catch(error => {
-            alert("❌ Error al enviar. Revisa tu conexión a internet.");
-            btnReg.innerText = "🔋 GUARDAR UBICACIÓN AQUÍ";
-        });
+            selectGenset.value = ""; // Limpiar menú
+            
+            // Limpiar el formulario creado
+            form.remove(); 
+            
+            // Refrescar los Gensets en el mapa 2 segundos después
+            setTimeout(cargarGensets, 2000);
+        };
+
+        // 5. Enviar el formulario
+        form.submit();
     }
 
     window.onload = function() { actualizarTodo(); }
