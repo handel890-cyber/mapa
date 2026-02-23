@@ -83,8 +83,6 @@
     <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 MI UBICACIÓN (GPS)</button>
     <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">...</div>
 
-    <button id="btn-registrar" style="background:#27ae60; color:white; display:none;" onclick="registrarGensetGPS()">🔋 REGISTRAR GENSET AQUÍ</button>
-
     <div class="tab-container">
         <button class="tab-btn active" onclick="cambiarTab('voladuras')" id="tab-vol">💥 Voladura</button>
         <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
@@ -100,6 +98,15 @@
 
     <div id="view-gensets" style="display:none;">
         <button id="btn-reporte" class="btn-report" onclick="cargarReporteNativo()">📄 VER REPORTE TÉCNICO</button>
+        
+        <div id="controles-registro-genset" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #9b59b6;">
+            <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📍 Asignar mi ubicación a:</label>
+            <select id="select-genset-maestro" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px;">
+                <option value="">Cargando Gensets...</option>
+            </select>
+            <button id="btn-registrar" style="background:#27ae60; color:white; margin:0;" onclick="registrarGensetGPS()">🔋 GUARDAR UBICACIÓN AQUÍ</button>
+        </div>
+
         <h4 style="color:#9b59b6">Generadores Activos</h4>
         <div id="lista-gensets"><em style="font-size:0.7em; color:#7f8c8d;">Sin datos...</em></div>
     </div>
@@ -128,7 +135,7 @@
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
 
-    // PEGA AQUÍ LA URL DE TU APPS SCRIPT (Paso 1)
+    // PEGA AQUÍ LA URL DE TU APPS SCRIPT
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbw_l7i1HblQlgyYKJhF5jE8mRiOqvcaUsWyxYQw-tZgUy3bG-ItSVwGsFV6eeWaX92T1w/exec";
 
     // --- DATA CORREGIDA Y APLANADA ---
@@ -378,10 +385,28 @@
             capaGensets.clearLayers();
             const listaDiv = document.getElementById("lista-gensets");
             listaDiv.innerHTML = "";
+            
+            // Set para guardar nombres únicos de Gensets (independientemente de si tienen coordenadas o no)
+            let nombresUnicos = new Set(); 
+
             for (let i = 1; i < filas.length; i++) {
                 const col = filas[i].split(',');
+                
+                // Extraer el nombre del Genset siempre que la columna exista
+                if (col.length >= 3) {
+                    const nombre = col[2] ? col[2].trim() : "";
+                    if (nombre !== "" && nombre !== "Nombre Genset" && nombre !== "Código") {
+                        nombresUnicos.add(nombre);
+                    }
+                }
+
+                // Dibujar en el mapa solo si tienen coordenadas y están TRABAJANDO
                 if (col.length >= 4 && col[0].trim() !== "") {
-                    const n = parseFloat(col[0]); const e = parseFloat(col[1]); const nombre = col[2]; const estado = col[3] ? col[3].trim().toUpperCase() : ""; const lugar = col[4] || "Sin datos"; const horas = col[5] || "-"; const tension = col[6] || "-";
+                    const n = parseFloat(col[0]); const e = parseFloat(col[1]); 
+                    const nombre = col[2] ? col[2].trim() : ""; 
+                    const estado = col[3] ? col[3].trim().toUpperCase() : ""; 
+                    const lugar = col[4] || "Sin datos"; const horas = col[5] || "-"; const tension = col[6] || "-";
+                    
                     if (estado.includes("TRABAJANDO") && !isNaN(n)) {
                         try {
                             const c = proj4("EPSG:32718", "EPSG:4326", [e, n]);
@@ -394,7 +419,17 @@
                     }
                 }
             }
+            
             if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center;color:grey'>No hay gensets activos.</div>";
+
+            // Llenar el <select> con los nombres extraídos para el registro GPS
+            let selectGenset = document.getElementById("select-genset-maestro");
+            let opcionesHTML = '<option value="">-- Selecciona un Genset --</option>';
+            Array.from(nombresUnicos).sort().forEach(nombreGen => {
+                opcionesHTML += `<option value="${nombreGen}">${nombreGen}</option>`;
+            });
+            selectGenset.innerHTML = opcionesHTML;
+
         } catch (err) { console.error("Error Gensets", err); }
     }
 
@@ -497,7 +532,7 @@
     }
     function enviarNotificacion(t, c) {
         if (Notification.permission === "granted" && !notificacionEnviada) {
-            new Notification("🚨 ALERTA TOROMOCHO", { body: t + ": " + c });
+            new Notification("🚨 ALERTA", { body: t + ": " + c });
             notificacionEnviada = true; setTimeout(() => { notificacionEnviada = false; }, 300000); 
         }
     }
@@ -519,7 +554,10 @@
                 document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
             } catch(e) {}
             btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
-            document.getElementById("btn-registrar").style.display = "block";
+            
+            // MOSTRAR CONTROLES SOLO AL ACTIVAR GPS
+            document.getElementById("controles-registro-genset").style.display = "block";
+            
             if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
             else { marcadorVehiculo.setLatLng([lat, lon]); }
             chequearTormentas(); chequearProximidadVoladura();
@@ -559,15 +597,20 @@
         else { box.style.display = "none"; }
     }
 
-    // --- NUEVO: REGISTRAR GENSET AL GOOGLE SHEET ---
+    // --- NUEVO: REGISTRAR GENSET AL GOOGLE SHEET USANDO EL SELECT ---
     function registrarGensetGPS() {
         if (!miPosicion) {
             alert("❌ Primero activa el GPS y espera a tener señal.");
             return;
         }
 
-        let nombreGenset = prompt("Ingresa el nombre o código del Genset (Ej. GEN-05):");
-        if (!nombreGenset || nombreGenset.trim() === "") return;
+        let selectGenset = document.getElementById("select-genset-maestro");
+        let nombreGenset = selectGenset.value;
+
+        if (!nombreGenset || nombreGenset.trim() === "") {
+            alert("⚠️ Por favor selecciona un Genset de la lista antes de guardar.");
+            return;
+        }
 
         let utm;
         try {
@@ -587,13 +630,14 @@
         fetch(urlCompleta)
         .then(response => response.text())
         .then(data => {
-            alert(`✅ Genset ${nombreGenset} registrado en tu Google Sheet con éxito.`);
-            btnReg.innerText = "🔋 REGISTRAR GENSET AQUÍ";
-            cargarGensets(); 
+            alert(`✅ Ubicación de ${nombreGenset} actualizada en tu Google Sheet con éxito.`);
+            btnReg.innerText = "🔋 GUARDAR UBICACIÓN AQUÍ";
+            selectGenset.value = ""; // Limpiar la selección
+            cargarGensets(); // Refrescar el mapa y la lista
         })
         .catch(error => {
             alert("❌ Error al enviar. Revisa tu conexión a internet.");
-            btnReg.innerText = "🔋 REGISTRAR GENSET AQUÍ";
+            btnReg.innerText = "🔋 GUARDAR UBICACIÓN AQUÍ";
         });
     }
 
