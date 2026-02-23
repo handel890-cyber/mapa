@@ -100,10 +100,14 @@
         <button id="btn-reporte" class="btn-report" onclick="cargarReporteNativo()">📄 VER REPORTE TÉCNICO</button>
         
         <div id="controles-registro-genset" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #9b59b6;">
-            <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📍 Asignar mi ubicación a:</label>
-            <select id="select-genset-maestro" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px;">
+            <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📍 Genset a posicionar:</label>
+            <select id="select-genset-maestro" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
                 <option value="">Cargando Gensets...</option>
             </select>
+            
+            <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📝 Lugar / Referencia:</label>
+            <input type="text" id="input-lugar" placeholder="Ej. Truck Shop, Fase 3..." style="width: 100%; padding: 8px; margin-bottom: 15px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
+            
             <button id="btn-registrar" style="background:#27ae60; color:white; margin:0;" onclick="registrarGensetGPS()">🔋 GUARDAR UBICACIÓN AQUÍ</button>
         </div>
 
@@ -135,8 +139,8 @@
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
 
-    // PEGA AQUÍ LA URL DE TU APPS SCRIPT
-    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbw_l7i1HblQlgyYKJhF5jE8mRiOqvcaUsWyxYQw-tZgUy3bG-ItSVwGsFV6eeWaX92T1w/exec";
+    // ⚠️ REEMPLAZA ESTO CON LA URL QUE GENERASTE EN TU APPS SCRIPT AL HACER "NUEVA IMPLEMENTACIÓN"
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycby4yStrPOJqYGVs_L0o3o5goYqDl2EwgLOvmZ-GpRtew48ndz6wP7g_H4VjFKjzXn_6qQ/exec";
 
     // --- DATA CORREGIDA Y APLANADA ---
     var datosEnergia = {
@@ -333,7 +337,6 @@
     var capaTormentas = L.layerGroup().addTo(map);
     var lineaDistancia = L.layerGroup().addTo(map);
 
-    // --- MODO FANTASMA (Líneas grises muy tenues, casi invisibles) ---
     function estiloEnergia(feature) { return { color: "#999", weight: 1, opacity: 0.1, dashArray: '5, 5' }; }
     function estiloPuntos(feature, latlng) { return L.circleMarker(latlng, { radius: 2, fillColor: "#ccc", color: "#000", weight: 0.5, opacity: 0.1, fillOpacity: 0.1 }); }
 
@@ -386,13 +389,11 @@
             const listaDiv = document.getElementById("lista-gensets");
             listaDiv.innerHTML = "";
             
-            // Set para guardar nombres únicos de Gensets (independientemente de si tienen coordenadas o no)
             let nombresUnicos = new Set(); 
 
             for (let i = 1; i < filas.length; i++) {
                 const col = filas[i].split(',');
                 
-                // Extraer el nombre del Genset siempre que la columna exista
                 if (col.length >= 3) {
                     const nombre = col[2] ? col[2].trim() : "";
                     if (nombre !== "" && nombre !== "Nombre Genset" && nombre !== "Código") {
@@ -400,7 +401,6 @@
                     }
                 }
 
-                // Dibujar en el mapa solo si tienen coordenadas y están TRABAJANDO
                 if (col.length >= 4 && col[0].trim() !== "") {
                     const n = parseFloat(col[0]); const e = parseFloat(col[1]); 
                     const nombre = col[2] ? col[2].trim() : ""; 
@@ -422,7 +422,6 @@
             
             if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center;color:grey'>No hay gensets activos.</div>";
 
-            // Llenar el <select> con los nombres extraídos para el registro GPS
             let selectGenset = document.getElementById("select-genset-maestro");
             let opcionesHTML = '<option value="">-- Selecciona un Genset --</option>';
             Array.from(nombresUnicos).sort().forEach(nombreGen => {
@@ -555,7 +554,6 @@
             } catch(e) {}
             btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
             
-            // MOSTRAR CONTROLES SOLO AL ACTIVAR GPS
             document.getElementById("controles-registro-genset").style.display = "block";
             
             if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
@@ -597,7 +595,7 @@
         else { box.style.display = "none"; }
     }
 
-    // --- NUEVO: REGISTRAR GENSET AL GOOGLE SHEET USANDO EL SELECT ---
+    // --- FORMULARIO OCULTO PARA EVITAR CORS ---
     function registrarGensetGPS() {
         if (!miPosicion) {
             alert("❌ Primero activa el GPS y espera a tener señal.");
@@ -605,10 +603,17 @@
         }
 
         let selectGenset = document.getElementById("select-genset-maestro");
+        let inputLugar = document.getElementById("input-lugar");
+        
         let nombreGenset = selectGenset.value;
+        let lugarGenset = inputLugar.value;
 
         if (!nombreGenset || nombreGenset.trim() === "") {
-            alert("⚠️ Por favor selecciona un Genset de la lista antes de guardar.");
+            alert("⚠️ Por favor selecciona un Genset de la lista.");
+            return;
+        }
+        if (!lugarGenset || lugarGenset.trim() === "") {
+            alert("⚠️ Por favor escribe el Lugar o Referencia.");
             return;
         }
 
@@ -625,684 +630,36 @@
         let btnReg = document.getElementById("btn-registrar");
         btnReg.innerText = "⏳ ENVIANDO...";
 
-        let urlCompleta = `${URL_APPS_SCRIPT}?norte=${norte}&este=${este}&nombre=${encodeURIComponent(nombreGenset)}`;
-
-        <!DOCTYPE html>
-<html lang="es">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SISTEMA GESTIÓN TOROMOCHO</title>
-    
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        /* --- ESTILOS --- */
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
-        #map { height: 100%; width: 100%; z-index: 1; }
-        
-        #menu-toggle { position: absolute; top: 10px; left: 10px; z-index: 1100; background: #2c3e50; color: white; border: none; border-radius: 4px; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
-
-        #panel { 
-            position: absolute; top: 60px; left: 10px; width: 280px; 
-            background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
-            border-radius: 8px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-            max-height: 85vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
-            transform: translateX(0);
-        }
-        #panel.escondido { transform: translateX(-360%); }
-
-        h4 { margin: 10px 0 5px 0; font-size: 0.8em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
-        
-        button { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
-        .btn-gps { background: #2980b9; color: white; }
-        .btn-sync { background: #8e44ad; color: white; } 
-        .btn-report { background: #d35400; color: white; border: 1px solid #e67e22; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        .btn-alert { 
-            background: #c0392b; color: white; 
-            border: 2px solid #e74c3c; margin-bottom: 15px; 
-            box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
-            animation: parpadeo-boton 1s infinite alternate; 
-            display: none; 
-        }
-        @keyframes parpadeo-boton { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(0.98); } }
-
-        .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
-        .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
-
-        .list-item { background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
-        .list-item:hover { background: rgba(255,255,255,0.1); }
-        .genset-item { border-left-color: #9b59b6; }
-        .genset-marker { background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black; display: flex; align-items: center; justify-content: center; }
-        .genset-marker svg { width: 18px; height: 18px; fill: white; }
-        .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
-
-        #radio-silence-alert { position: absolute; bottom: 30px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate; }
-        @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
-        
-        #reloj-sistema { font-family: monospace; color: #f1c40f; text-align: center; font-size: 1.2em; margin-bottom: 10px; border: 1px solid #555; padding: 5px; background: rgba(0,0,0,0.3); }
-        .storm-alert, .proximity-alert { padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
-        .storm-alert { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; color: #f1c40f; }
-        .proximity-alert { background: rgba(243, 156, 18, 0.2); border: 2px solid #f39c12; color: #e67e22; }
-        .proximity-critical { background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b; color: #ff6b6b; }
-        .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
-        .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
-        
-        #tabla-dinamica { width: 100%; border-collapse: collapse; font-size: 0.85em; color: #333; }
-        #tabla-dinamica th { background: #2c3e50; color: white; padding: 10px; text-align: left; position: sticky; top: 0; }
-        #tabla-dinamica td { padding: 8px; border-bottom: 1px solid #ddd; }
-        #tabla-dinamica tr:nth-child(even) { background-color: #f2f2f2; }
-        #btn-permiso { background: #16a085; font-size:0.7em; margin-bottom:10px; display:none; }
-    </style>
-</head>
-<body>
-
-<div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫</div>
-
-<button id="menu-toggle" onclick="togglePanel()">☰</button>
-
-<div id="panel">
-    <div id="reloj-sistema">--:--:--</div>
-    <button id="btn-permiso" onclick="pedirPermisoNotificaciones()">🔔 ACTIVAR ALERTAS</button>
-
-    <div id="storm-box" class="storm-alert"></div>
-    <div id="proximity-box" class="proximity-alert"></div>
-
-    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 MI UBICACIÓN (GPS)</button>
-    <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">...</div>
-
-    <div class="tab-container">
-        <button class="tab-btn active" onclick="cambiarTab('voladuras')" id="tab-vol">💥 Voladura</button>
-        <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
-    </div>
-
-    <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
-
-    <div id="view-voladuras">
-        <button id="btn-interferencia" class="btn-alert" onclick="mostrarTablaInterferencias()">🚨 VER POSTES AFECTADOS</button>
-        <h4 style="color:#e74c3c">Programación Hoy</h4>
-        <div id="lista-voladuras"><em style="font-size:0.7em; color:#7f8c8d;">Cargando...</em></div>
-    </div>
-
-    <div id="view-gensets" style="display:none;">
-        <button id="btn-reporte" class="btn-report" onclick="cargarReporteNativo()">📄 VER REPORTE TÉCNICO</button>
-        
-        <div id="controles-registro-genset" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #9b59b6;">
-            <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📍 Asignar mi ubicación a:</label>
-            <select id="select-genset-maestro" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px;">
-                <option value="">Cargando Gensets...</option>
-            </select>
-            <button id="btn-registrar" style="background:#27ae60; color:white; margin:0;" onclick="registrarGensetGPS()">🔋 GUARDAR UBICACIÓN AQUÍ</button>
-        </div>
-
-        <h4 style="color:#9b59b6">Generadores Activos</h4>
-        <div id="lista-gensets"><em style="font-size:0.7em; color:#7f8c8d;">Sin datos...</em></div>
-    </div>
-    <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
-</div>
-
-<div id="modal-reporte" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:white; width:95%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
-        <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-            <span id="modal-titulo" style="font-weight:bold;">📋 REPORTE</span>
-            <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px;">X</button>
-        </div>
-        <div id="contenedor-tabla" style="overflow:auto; padding:0; height:100%; background:white;">
-            <div style="padding:20px; text-align:center; color:grey;">Cargando...</div>
-        </div>
-    </div>
-</div>
-
-<div id="map"></div>
-
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
-
-<script>
-    var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
-    var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
-    var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
-
-    // PEGA AQUÍ LA URL DE TU APPS SCRIPT
-    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbw_l7i1HblQlgyYKJhF5jE8mRiOqvcaUsWyxYQw-tZgUy3bG-ItSVwGsFV6eeWaX92T1w/exec";
-
-    // --- DATA CORREGIDA Y APLANADA ---
-    var datosEnergia = {
-      "type": "FeatureCollection",
-      "features": [
-        // PUNTOS (POSTES)
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144659, -11.620111 ] }, "properties": { "name": "P4:R1-DT" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144283, -11.620266 ] }, "properties": { "name": "P3:R1-DT" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143304, -11.620668 ] }, "properties": { "name": "P2A:R1-DT" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142626, -11.620960 ] }, "properties": { "name": "P2:R1-DT" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142324, -11.621061 ] }, "properties": { "name": "P1: A3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144695, -11.620012 ] }, "properties": { "name": "P1:THREE WAY" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144676, -11.619867 ] }, "properties": { "name": "P2:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144647, -11.619542 ] }, "properties": { "name": "P3:S2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144552, -11.618566 ] }, "properties": { "name": "P4:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144790, -11.618510 ] }, "properties": { "name": "P cable desconectado" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145440, -11.618381 ] }, "properties": { "name": "P" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144576, -11.617752 ] }, "properties": { "name": "P5 Secc: A3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144677, -11.620030 ] }, "properties": { "name": "110 DS 008" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142324, -11.621025 ] }, "properties": { "name": "P1:A3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142626, -11.620843 ] }, "properties": { "name": "P2:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142946, -11.620643 ] }, "properties": { "name": "P3:S0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143476, -11.620224 ] }, "properties": { "name": "P4:A1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143482, -11.619555 ] }, "properties": { "name": "P5:A2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142417, -11.619261 ] }, "properties": { "name": "T6:S0-3C" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.141178, -11.618904 ] }, "properties": { "name": "T7:S0-3C" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.140178, -11.618954 ] }, "properties": { "name": "P6:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.138996, -11.619103 ] }, "properties": { "name": "P7:R1-PIN" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.137913, -11.619143 ] }, "properties": { "name": "P8:DOS POSTES-R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.137039, -11.618288 ] }, "properties": { "name": "P-9:DOS POSTES-R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.134680, -11.615675 ] }, "properties": { "name": "P13:S0+1 LP" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.135970, -11.617144 ] }, "properties": { "name": "P10:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.135786, -11.616918 ] }, "properties": { "name": "P11:S0" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.135224, -11.616306 ] }, "properties": { "name": "P12:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.134533, -11.615522 ] }, "properties": { "name": "P14:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.134302, -11.615270 ] }, "properties": { "name": "T15:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.132353, -11.614075 ] }, "properties": { "name": "P16:DOS POSTES-R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131304, -11.613202 ] }, "properties": { "name": "P17:THREE WAY" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.130541, -11.612635 ] }, "properties": { "name": "P18:A1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.130014, -11.611642 ] }, "properties": { "name": "P19:A2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129915, -11.609925 ] }, "properties": { "name": "P20:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129857, -11.609093 ] }, "properties": { "name": "P21:A2*" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129621, -11.607512 ] }, "properties": { "name": "P22:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129518, -11.606825 ] }, "properties": { "name": "P23:A2*" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129442, -11.606174 ] }, "properties": { "name": "P24:A1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.129715, -11.605730 ] }, "properties": { "name": "P25:R1+2 PIN" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.130490, -11.604633 ] }, "properties": { "name": "P26:A1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.130949, -11.604342 ] }, "properties": { "name": "P27:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131240, -11.604151 ] }, "properties": { "name": "P28:R1-PIN" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131423, -11.604024 ] }, "properties": { "name": "P29:R1-PIN" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131623, -11.603544 ] }, "properties": { "name": "P30:R1*+SECC" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131686, -11.603344 ] }, "properties": { "name": "P31:S2*" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131666, -11.602947 ] }, "properties": { "name": "P32:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131618, -11.602350 ] }, "properties": { "name": "P33:S0-1C" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131550, -11.601356 ] }, "properties": { "name": "P34:A1*" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.131724, -11.601337 ] }, "properties": { "name": "P35:A2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142324, -11.621097 ] }, "properties": { "name": "P1: A3" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153637, -11.604379 ] }, "properties": { "name": "P21:R1*" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142626, -11.620960 ] }, "properties": { "name": "P2:R1-DT" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143304, -11.620668 ] }, "properties": { "name": "P2A:R1-DT" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144283, -11.620266 ] }, "properties": { "name": "P3:R1-DT" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144659, -11.620111 ] }, "properties": { "name": "P4:R1-DT" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145126, -11.619947 ] }, "properties": { "name": "P5:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145850, -11.619745 ] }, "properties": { "name": "P6:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147525, -11.619123 ] }, "properties": { "name": "R" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147544, -11.619178 ] }, "properties": { "name": "S" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147563, -11.619241 ] }, "properties": { "name": "T" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151730, -11.617777 ] }, "properties": { "name": "R" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151748, -11.617814 ] }, "properties": { "name": "S" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151776, -11.617850 ] }, "properties": { "name": "T" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153489, -11.612815 ] }, "properties": { "name": "P15:A2+JUMPER" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147415, -11.619051 ] }, "properties": { "name": "P7A RST" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147571, -11.619159 ] }, "properties": { "name": "P7 RST" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151721, -11.617823 ] }, "properties": { "name": "P8 RST:A2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153559, -11.612119 ] }, "properties": { "name": "P16:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153630, -11.611513 ] }, "properties": { "name": "T" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153584, -11.611513 ] }, "properties": { "name": "S" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153529, -11.611513 ] }, "properties": { "name": "R" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153609, -11.610916 ] }, "properties": { "name": "T" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153563, -11.610916 ] }, "properties": { "name": "S" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153518, -11.610907 ] }, "properties": { "name": "R" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153538, -11.606848 ] }, "properties": { "name": "T18:TR1+JUMPER" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153830, -11.606629 ] }, "properties": { "name": "P19:A2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153923, -11.604694 ] }, "properties": { "name": "P20:A2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.152513, -11.603117 ] }, "properties": { "name": "P22:A2" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.151000, -11.603078 ] }, "properties": { "name": "P23:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148982, -11.603023 ] }, "properties": { "name": "P25:R1**" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.149386, -11.603030 ] }, "properties": { "name": "P24:R1" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148192, -11.602728 ] }, "properties": { "name": "P26:A2-LP" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147433, -11.619006 ] }, "properties": { "name": "ST" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.147452, -11.619033 ] }, "properties": { "name": "R" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153584, -11.611549 ] }, "properties": { "name": "P17 RST:A2+JUMPER" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153490, -11.610971 ] }, "properties": { "name": "P17A RST:S0-3C" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153601, -11.604397 ] }, "properties": { "name": "110 DS 016" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153445, -11.606676 ] }, "properties": { "name": "P18A THREE WAY" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.152499, -11.617494 ] }, "properties": { "name": "P.09" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.152918, -11.616869 ] }, "properties": { "name": "P.10" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153319, -11.616062 ] }, "properties": { "name": "P.11" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153701, -11.615310 ] }, "properties": { "name": "P.12" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.154019, -11.614613 ] }, "properties": { "name": "P.13" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.154273, -11.614051 ] }, "properties": { "name": "P.14" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.154957, -11.613036 ] }, "properties": { "name": "P.14A" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153820, -11.612995 ] }, "properties": { "name": "P.14B" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.154847, -11.613081 ] }, "properties": { "name": "P.14A" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153645, -11.612987 ] }, "properties": { "name": "P.14C" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.153498, -11.612824 ] }, "properties": { "name": "P.15" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148338, -11.602573 ] }, "properties": { "name": "P.25_S" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148375, -11.602546 ] }, "properties": { "name": "P.25_R" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.148293, -11.602628 ] }, "properties": { "name": "P.25_T" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145870, -11.599970 ] }, "properties": { "name": "P.26_R" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145842, -11.599988 ] }, "properties": { "name": "P.26_S" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145796, -11.599997 ] }, "properties": { "name": "P.26_T" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145482, -11.599248 ] }, "properties": { "name": "P.27" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144392, -11.597372 ] }, "properties": { "name": "P.28" } },
-        { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142418, -11.596819 ] }, "properties": { "name": "P.29" } },
-        // LÍNEAS (CABLES)
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.144659,-11.620110], [-76.144689,-11.620009], [-76.144674,-11.619860], [-76.144641,-11.619535], [-76.144550,-11.618555], [-76.144576,-11.617749]] }, "properties": { "name": "Drv. Antiguo Truck Shop", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142323,-11.621057], [-76.142628,-11.620956], [-76.143304,-11.620664], [-76.144282,-11.620263], [-76.144659,-11.620106]] }, "properties": { "name": "Anillo Mina C1", "stroke": "#55ffff" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142327,-11.621024], [-76.142632,-11.620843], [-76.142945,-11.620642], [-76.143475,-11.620225], [-76.143482,-11.619557], [-76.142415,-11.619263], [-76.141176,-11.618905], [-76.140175,-11.618956], [-76.138995,-11.619103], [-76.137911,-11.619143], [-76.137034,-11.618290], [-76.135969,-11.617146], [-76.135784,-11.616920], [-76.135223,-11.616307], [-76.134679,-11.615676], [-76.134532,-11.615523], [-76.134301,-11.615268], [-76.132350,-11.614074], [-76.131300,-11.613201], [-76.130537,-11.612636], [-76.130011,-11.611643], [-76.129915,-11.609930], [-76.129855,-11.609084], [-76.129621,-11.607511], [-76.129519,-11.606821], [-76.129442,-11.606167], [-76.129717,-11.605728], [-76.130488,-11.604624], [-76.130949,-11.604339], [-76.131240,-11.604148], [-76.131421,-11.604021], [-76.131622,-11.603543], [-76.131685,-11.603344], [-76.131666,-11.602948], [-76.131616,-11.602349], [-76.131549,-11.601355], [-76.131724,-11.601336], [-76.132061,-11.600936]] }, "properties": { "name": "L.3", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.154243, -11.614043 ], [ -76.154943, -11.613021 ], [ -76.153813, -11.612988 ] ] }, "properties": { "name": "L.4", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.145848, -11.619735 ], [ -76.147563, -11.619237 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.145848, -11.619737 ], [ -76.147525, -11.619123 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147454, -11.619027 ], [ -76.151777, -11.617845 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147435, -11.619002 ], [ -76.151725, -11.617773 ] ] }, "properties": { "name": "Ruta sin título", "stroke": "#ffff00" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147565, -11.619239 ], [ -76.147433, -11.619003 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147542, -11.619174 ], [ -76.147436, -11.619004 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147525, -11.619121 ], [ -76.147454, -11.619027 ] ] }, "properties": { "name": "Cable Seco MT", "stroke": "#ff0000" } },
-        { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [ [ -76.147446, -11.619015 ], [ -76.151752, -11.617813 ], [ -76.152530, -11.617488 ], [ -76.151796, -11.617850 ], [ -76.151727, -11.617770 ], [ -76.152528, -11.617487 ], [ -76.152888, -11.616857 ], [ -76.153288, -11.616053 ], [ -76.153673, -11.615291 ], [ -76.153990, -11.614599 ], [ -76.154244, -11.614024 ], [ -76.154872, -11.613074 ], [ -76.153822, -11.612995 ], [ -76.153669, -11.612983 ], [ -76.153517, -11.612819 ], [ -76.153572, -11.612118 ], [ -76.153649, -11.611508 ], [ -76.153600, -11.610908 ], [ -76.153566, -11.606864 ], [ -76.153564, -11.612114 ], [ -76.153534, -11.611510 ], [ -76.153537, -11.610900 ], [ -76.153559, -11.606853 ], [ -76.153878, -11.606607 ], [ -76.153940, -11.604695 ], [ -76.153657, -11.604373 ], [ -76.152543, -11.603112 ], [ -76.151035, -11.603073 ], [ -76.149438, -11.603026 ], [ -76.148371, -11.602547 ], [ -76.145877, -11.599959 ], [ -76.145487, -11.599240 ], [ -76.145845, -11.599973 ], [ -76.148331, -11.602575 ], [ -76.149437, -11.603027 ], [ -76.148293, -11.602627 ], [ -76.145798, -11.599981 ], [ -76.145487, -11.599242 ], [ -76.144399, -11.597333 ], [ -76.142420, -11.596797 ] ] }, "properties": { "name": "L.3", "stroke": "#ffff00" } }
-      ]
-    };
-
-    function togglePanel() { document.getElementById('panel').classList.toggle('escondido'); }
-    
-    function cambiarTab(tab) {
-        document.getElementById('view-voladuras').style.display = (tab === 'voladuras') ? 'block' : 'none';
-        document.getElementById('view-gensets').style.display = (tab === 'gensets') ? 'block' : 'none';
-        document.getElementById('tab-vol').className = (tab === 'voladuras') ? 'tab-btn active' : 'tab-btn';
-        document.getElementById('tab-gen').className = (tab === 'gensets') ? 'tab-btn active' : 'tab-btn';
-    }
-
-    function mostrarReporteGenerico(titulo, filas) {
-        var modal = document.getElementById('modal-reporte');
-        var contenedor = document.getElementById('contenedor-tabla');
-        var tituloSpan = document.getElementById('modal-titulo');
-        tituloSpan.innerText = titulo;
-        modal.style.display = "flex";
-        let htmlTabla = '<table id="tabla-dinamica"><tr><th>DETALLE</th><th>ESTADO</th></tr>';
-        filas.forEach(f => { htmlTabla += `<tr><td>${f.nombre}</td><td>${f.estado}</td></tr>`; });
-        htmlTabla += '</table>';
-        contenedor.innerHTML = htmlTabla;
-    }
-
-    async function cargarReporteNativo() {
-        var modal = document.getElementById('modal-reporte');
-        var contenedor = document.getElementById('contenedor-tabla');
-        var tituloSpan = document.getElementById('modal-titulo');
-        tituloSpan.innerText = "📋 REPORTE TÉCNICO";
-        modal.style.display = "flex";
-        contenedor.innerHTML = '<div style="padding:20px; text-align:center; color:grey;">⏳ Descargando datos...</div>';
-        try {
-            const response = await fetch(LINK_REPORTE_CSV + '&t=' + Date.now());
-            const text = await response.text();
-            const filas = text.split('\n');
-            let htmlTabla = '<table id="tabla-dinamica">';
-            for (let i = 0; i < filas.length; i++) {
-                if(filas[i].trim() === "") continue;
-                var celdas = filas[i].split(',');
-                htmlTabla += '<tr>';
-                for (let j = 0; j < celdas.length; j++) {
-                    var tag = (i === 0) ? 'th' : 'td';
-                    htmlTabla += `<${tag}>${celdas[j]}</${tag}>`;
-                }
-                htmlTabla += '</tr>';
-            }
-            htmlTabla += '</table>';
-            contenedor.innerHTML = htmlTabla;
-        } catch (error) { contenedor.innerHTML = '<div style="padding:20px; text-align:center; color:red;">❌ Error al cargar reporte.</div>'; }
-    }
-
-    function cerrarReporte() { document.getElementById('modal-reporte').style.display = "none"; }
-
-    setInterval(() => { document.getElementById("reloj-sistema").innerText = new Date().toLocaleTimeString('es-PE', { hour12: false }); }, 1000);
-
-    proj4.defs("EPSG:32718", "+proj=utm +zone=18 +south +datum=WGS84 +units=m +no_defs");
-    var map = L.map('map', { zoomControl: false }).setView([-11.619, -76.08], 13);
-    var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { attribution: 'Esri' });
-    var mapaPlano = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: 'OSM' });
-    var mapaTopo = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { attribution: 'OTM' });
-    mapaSatelite.addTo(map);
-    
-    var capaVoladuras = L.layerGroup().addTo(map);
-    var capaGensets = L.layerGroup().addTo(map);
-    var capaGPS = L.layerGroup().addTo(map);
-    var capaTormentas = L.layerGroup().addTo(map);
-    var lineaDistancia = L.layerGroup().addTo(map);
-
-    // --- MODO FANTASMA (Líneas grises muy tenues, casi invisibles) ---
-    function estiloEnergia(feature) { return { color: "#999", weight: 1, opacity: 0.1, dashArray: '5, 5' }; }
-    function estiloPuntos(feature, latlng) { return L.circleMarker(latlng, { radius: 2, fillColor: "#ccc", color: "#000", weight: 0.5, opacity: 0.1, fillOpacity: 0.1 }); }
-
-    var capaEnergia = L.geoJSON(datosEnergia, {
-        style: estiloEnergia,
-        pointToLayer: estiloPuntos,
-        onEachFeature: function (feature, layer) { if (feature.properties && feature.properties.name) { layer.bindPopup("🔌 <b>" + feature.properties.name + "</b>"); } }
-    }).addTo(map);
-
-    L.control.layers( { "🌎 Satélite": mapaSatelite, "🗺️ Plano": mapaPlano, "⛰️ Topográfico": mapaTopo }, { "⚡ Sensores": capaTormentas, "💥 Voladuras": capaVoladuras, "🟣 Gensets": capaGensets, "🔌 Líneas Eléctricas": capaEnergia }, { position: 'topright' } ).addTo(map);
-
-    const sensores = [ { nombre: "MINA", lat: -11.61543, lon: -76.14331 }, { nombre: "CARHUACOTO", lat: -11.58529, lon: -76.06169 }, { nombre: "TUNSHURUCO", lat: -11.67360, lon: -76.13777 }, { nombre: "KINGSMILL", lat: -11.63342, lon: -76.05691 } ];
-    sensores.forEach(s => { L.marker([s.lat, s.lon], {icon: L.divIcon({html:'⚡', className:''})}).addTo(capaTormentas); L.circle([s.lat, s.lon], {radius: 5200, color:'#3498db', fillColor:'#3498db', fillOpacity:0.15, weight:1}).addTo(capaTormentas); });
-
-    var zonasProgramadas = [];
-    var zonasActivasAhora = []; 
-    var postesAfectados = [];
-    var intervaloChequeo = null;
-
-    function actualizarTodo() { cargarVoladuras(); cargarGensets(); }
-
-    async function cargarVoladuras() {
-        var btn = document.querySelector(".btn-sync");
-        btn.innerHTML = "⏳ CARGANDO...";
-        try {
-            const response = await fetch(LINK_VOLADURAS + '&t=' + Date.now());
-            const text = await response.text();
-            zonasProgramadas = [];
-            const filas = text.split('\n');
-            for (let i = 1; i < filas.length; i++) {
-                const col = filas[i].split(',');
-                if (col.length >= 6 && col[0].trim() !== "") {
-                    zonasProgramadas.push({ n: parseFloat(col[0]), e: parseFloat(col[1]), r: parseFloat(col[2]), detalle: col[3], hora: col[4].trim(), dur: parseInt(col[5]) });
-                }
-            }
-            if (intervaloChequeo) clearInterval(intervaloChequeo);
-            actualizarMapaSegunHora();
-            intervaloChequeo = setInterval(actualizarMapaSegunHora, 1000);
-            btn.innerHTML = "✅ LISTO"; setTimeout(() => { btn.innerHTML = "🔄 ACTUALIZAR DATOS"; }, 3000);
-        } catch (err) { console.error(err); btn.innerHTML = "❌ ERROR VOL"; }
-    }
-
-    async function cargarGensets() {
-        if (!LINK_GENSETS.startsWith("http")) return; 
-        try {
-            const response = await fetch(LINK_GENSETS + '&t=' + Date.now());
-            const text = await response.text();
-            const filas = text.split('\n');
-            capaGensets.clearLayers();
-            const listaDiv = document.getElementById("lista-gensets");
-            listaDiv.innerHTML = "";
-            
-            // Set para guardar nombres únicos de Gensets (independientemente de si tienen coordenadas o no)
-            let nombresUnicos = new Set(); 
-
-            for (let i = 1; i < filas.length; i++) {
-                const col = filas[i].split(',');
-                
-                // Extraer el nombre del Genset siempre que la columna exista
-                if (col.length >= 3) {
-                    const nombre = col[2] ? col[2].trim() : "";
-                    if (nombre !== "" && nombre !== "Nombre Genset" && nombre !== "Código") {
-                        nombresUnicos.add(nombre);
-                    }
-                }
-
-                // Dibujar en el mapa solo si tienen coordenadas y están TRABAJANDO
-                if (col.length >= 4 && col[0].trim() !== "") {
-                    const n = parseFloat(col[0]); const e = parseFloat(col[1]); 
-                    const nombre = col[2] ? col[2].trim() : ""; 
-                    const estado = col[3] ? col[3].trim().toUpperCase() : ""; 
-                    const lugar = col[4] || "Sin datos"; const horas = col[5] || "-"; const tension = col[6] || "-";
-                    
-                    if (estado.includes("TRABAJANDO") && !isNaN(n)) {
-                        try {
-                            const c = proj4("EPSG:32718", "EPSG:4326", [e, n]);
-                            const lat = c[1]; const lon = c[0];
-                            const iconoGenset = L.divIcon({ className: 'genset-marker', html: `<svg viewBox="0 0 24 24"><path d="M4 6h16v10H4z"/><path d="M6 8h12v6H6z" fill="#8e44ad"/><path d="M7 9h3v4H7zm4 0h3v4h-3zm4 0h3v4h-3z" fill="white"/><path d="M5 16v3h2v-3m10 0v3h2v-3" stroke="white" stroke-width="2"/></svg>`, iconSize: [28, 28], iconAnchor: [14, 14] });
-                            const popupContent = `<div style="min-width:180px;"><h3 style="margin:0; color:#8e44ad;">${nombre}</h3><table class="tabla-info"><tr><td>Estado:</td><td><b style="color:#27ae60">${estado}</b></td></tr><tr><td>Lugar:</td><td>${lugar}</td></tr><tr><td>Horas:</td><td>${horas} hrs</td></tr><tr><td>Tensión:</td><td>${tension}</td></tr><tr><td>Coord:</td><td><small>${n}, ${e}</small></td></tr></table></div>`;
-                            L.marker([lat, lon], {icon: iconoGenset}).bindPopup(popupContent).addTo(capaGensets);
-                            listaDiv.innerHTML += `<div class="list-item genset-item" onclick="viajarA(${lat}, ${lon})"><div><strong>${nombre}</strong><br><small>${lugar}</small></div><div style="font-size:1.2em; color:#8e44ad">⚡</div></div>`;
-                        } catch(e) {}
-                    }
-                }
-            }
-            
-            if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center;color:grey'>No hay gensets activos.</div>";
-
-            // Llenar el <select> con los nombres extraídos para el registro GPS
-            let selectGenset = document.getElementById("select-genset-maestro");
-            let opcionesHTML = '<option value="">-- Selecciona un Genset --</option>';
-            Array.from(nombresUnicos).sort().forEach(nombreGen => {
-                opcionesHTML += `<option value="${nombreGen}">${nombreGen}</option>`;
-            });
-            selectGenset.innerHTML = opcionesHTML;
-
-        } catch (err) { console.error("Error Gensets", err); }
-    }
-
-    window.viajarA = function(lat, lon) { map.flyTo([lat, lon], 18); if (window.innerWidth < 600) togglePanel(); };
-
-    function actualizarMapaSegunHora() {
-        const ahora = new Date();
-        const listaDiv = document.getElementById("lista-voladuras");
-        const alertaDiv = document.getElementById("radio-silence-alert");
-        listaDiv.innerHTML = ""; capaVoladuras.clearLayers(); 
-        let haySilencioRadial = false; zonasActivasAhora = [];
-
-        zonasProgramadas.forEach(zona => {
-            if (!zona.hora) return;
-            const horaLimpia = zona.hora.trim().substring(0, 5); 
-            const [hh, mm] = horaLimpia.split(':');
-            
-            const fechaInicio = new Date(); fechaInicio.setHours(hh, mm, 0);
-            const fechaFin = new Date(fechaInicio.getTime() + zona.dur * 60000);
-            let estadoTexto = ""; let colorBorde = ""; let colorMapa = ""; let dibujar = false; let esPeligroso = false;
-
-            if (ahora > fechaFin) {
-                estadoTexto = "FINALIZADO"; colorBorde = "#7f8c8d";
-            } else if (ahora >= fechaInicio && ahora <= fechaFin) {
-                estadoTexto = "🚨 EN EJECUCIÓN"; colorBorde = "#e74c3c"; colorMapa = "red"; dibujar = true; haySilencioRadial = true; esPeligroso = true;
-            } else {
-                estadoTexto = "⏳ PROGRAMADO"; colorBorde = "#f39c12"; colorMapa = "orange"; dibujar = true; esPeligroso = true;
-            }
-
-            if (dibujar && !isNaN(zona.n)) {
-                try {
-                    const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
-                    if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
-                    const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
-                    const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
-                    L.circle([c[1], c[0]], { radius: zona.r, color: colorHex, fillColor: colorHex, fillOpacity: opacidad, weight: 2 }).bindPopup(`<b>${zona.detalle}</b><br>${zona.hora}`).addTo(capaVoladuras);
-                } catch(e) {}
-            }
-
-            if (estadoTexto !== "FINALIZADO" || (ahora - fechaFin) < 7200000) {
-                listaDiv.innerHTML += `<div class="list-item" style="border-left-color: ${colorBorde};"><div><strong style="font-size:1.1em">${zona.detalle}</strong><br><span style="color:${colorBorde}; font-weight:bold;">${estadoTexto}</span></div><div style="text-align:right;">${zona.hora}<br><small>${zona.dur} min</small></div></div>`;
-            }
-        });
-
-        alertaDiv.style.display = haySilencioRadial ? "block" : "none";
-        if (listaDiv.innerHTML === "") listaDiv.innerHTML = "<div style='text-align:center; padding:10px; color:#7f8c8d;'>Sin voladuras pendientes.</div>";
-        if (miPosicion) chequearProximidadVoladura();
-        verificarInterferencias(); 
-    }
-
-    function verificarInterferencias() {
-        postesAfectados = []; 
-        capaEnergia.eachLayer(function(layer) {
-            if (layer instanceof L.CircleMarker) { layer.setStyle({ fillColor: "#ccc", color: "#000", radius: 2, weight: 0.5, opacity: 0.1, fillOpacity: 0.1 }); } 
-            else if (layer instanceof L.Polyline) { layer.setStyle({ color: "#999", weight: 1, opacity: 0.1, dashArray: '5, 5' }); }
-        });
-
-        if (zonasActivasAhora.length === 0) { document.getElementById('btn-interferencia').style.display = 'none'; return; }
-
-        zonasActivasAhora.forEach(zona => {
-            capaEnergia.eachLayer(function(layer) {
-                let afectado = false;
-                if (layer instanceof L.CircleMarker) {
-                    if (map.distance(layer.getLatLng(), zona.center) <= zona.radius) afectado = true;
-                } else if (layer instanceof L.Polyline) {
-                    let puntos = layer.getLatLngs().flat ? layer.getLatLngs().flat(99) : layer.getLatLngs(); 
-                    for (let p of puntos) { if (map.distance(p, zona.center) <= zona.radius) { afectado = true; break; } }
-                }
-
-                if (afectado) {
-                    postesAfectados.push({ nombre: layer.feature.properties.name || "Sin Nombre", estado: "⚠️ " + zona.name });
-                    if (layer instanceof L.CircleMarker) {
-                        layer.setStyle({ fillColor: "red", color: "white", radius: 6, weight: 2, opacity: 1, fillOpacity: 1 });
-                        layer.bindPopup("🚨 <b>¡AFECTADO!</b><br>" + (layer.feature.properties.name || "Sin nombre"));
-                    } else {
-                        layer.setStyle({ color: "red", weight: 5, dashArray: null, opacity: 1 });
-                    }
-                }
-            });
-        });
-
-        var btnAlert = document.getElementById('btn-interferencia');
-        if (postesAfectados.length > 0) {
-            btnAlert.style.display = 'block';
-            btnAlert.innerText = `🚨 VER ${postesAfectados.length} POSTES AFECTADOS`;
-            enviarNotificacion("ALERTA", `Se detectaron ${postesAfectados.length} interferencias.`);
-        } else {
-            btnAlert.style.display = 'none';
-        }
-    }
-
-    function mostrarTablaInterferencias() { mostrarReporteGenerico("⚠️ POSTES AFECTADOS", postesAfectados); }
-
-    var notificacionEnviada = false;
-    function pedirPermisoNotificaciones() {
-        if (!("Notification" in window)) alert("No soportado");
-        else if (Notification.permission !== "denied") {
-            Notification.requestPermission().then(function (p) { if (p === "granted") { alert("Notificaciones Activadas"); document.getElementById('btn-permiso').style.display = 'none'; } });
-        }
-    }
-    function enviarNotificacion(t, c) {
-        if (Notification.permission === "granted" && !notificacionEnviada) {
-            new Notification("🚨 ALERTA", { body: t + ": " + c });
-            notificacionEnviada = true; setTimeout(() => { notificacionEnviada = false; }, 300000); 
-        }
-    }
-    if (Notification.permission !== "granted" && "Notification" in window) document.getElementById('btn-permiso').style.display = 'block';
-
-    var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
-    var marcadorVehiculo = null;
-    var miPosicion = null;
-
-    function iniciarSeguimiento() {
-        var btn = document.getElementById("btnGps");
-        if (!navigator.geolocation) { alert("Sin GPS"); return; }
-        btn.innerHTML = "🔄 BUSCANDO..."; btn.style.backgroundColor = "#e67e22";
-        navigator.geolocation.watchPosition((pos) => {
-            var lat = pos.coords.latitude; var lon = pos.coords.longitude;
-            miPosicion = L.latLng(lat, lon);
-            try {
-                var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
-                document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
-            } catch(e) {}
-            btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
-            
-            // MOSTRAR CONTROLES SOLO AL ACTIVAR GPS
-            document.getElementById("controles-registro-genset").style.display = "block";
-            
-            if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
-            else { marcadorVehiculo.setLatLng([lat, lon]); }
-            chequearTormentas(); chequearProximidadVoladura();
-        }, (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, { enableHighAccuracy: true });
-    }
-
-    function chequearProximidadVoladura() {
-        if (!miPosicion || zonasActivasAhora.length === 0) { document.getElementById("proximity-box").style.display = "none"; return; }
-        var box = document.getElementById("proximity-box");
-        var alertaActiva = false; var mensaje = ""; var claseCritica = false;
-        lineaDistancia.clearLayers();
-        const UMBRAL = 1000;
-        zonasActivasAhora.forEach(zona => {
-            var distCentro = map.distance(miPosicion, zona.center);
-            var distBorde = distCentro - zona.radius;
-            if (distBorde <= 0) {
-                alertaActiva = true; claseCritica = true; mensaje = `⛔ ¡PELIGRO!<br>ESTÁS DENTRO DE: ${zona.name}`;
-                L.polyline([miPosicion, zona.center], {color: 'red', weight: 4}).addTo(lineaDistancia);
-                enviarNotificacion("PELIGRO PERSONAL", "Usted está DENTRO de zona de voladura");
-            } else if (distBorde <= UMBRAL) {
-                if (!claseCritica) {
-                    alertaActiva = true; mensaje = `⚠️ PRECAUCIÓN<br>A ${distBorde.toFixed(0)}m de: ${zona.name}`;
-                    L.polyline([miPosicion, zona.center], {color: 'orange', dashArray: '5, 10'}).addTo(lineaDistancia);
-                }
-            }
-        });
-        if (alertaActiva) { box.style.display = "block"; box.innerHTML = mensaje; box.className = claseCritica ? "proximity-alert proximity-critical" : "proximity-alert"; }
-        else { box.style.display = "none"; }
-    }
-
-    function chequearTormentas() {
-        if (!miPosicion) return;
-        var box = document.getElementById("storm-box");
-        var detectados = [];
-        sensores.forEach(s => { if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) detectados.push(s.nombre); });
-        if (detectados.length > 0) { box.style.display = "block"; box.innerHTML = `⚡ EN SENSOR: <br>${detectados.join(" y ")}`; }
-        else { box.style.display = "none"; }
-    }
-
-    // --- NUEVO: REGISTRAR GENSET AL GOOGLE SHEET USANDO EL SELECT ---
-    function registrarGensetGPS() {
-        if (!miPosicion) {
-            alert("❌ Primero activa el GPS y espera a tener señal.");
-            return;
-        }
-
-        let selectGenset = document.getElementById("select-genset-maestro");
-        let nombreGenset = selectGenset.value;
-
-        if (!nombreGenset || nombreGenset.trim() === "") {
-            alert("⚠️ Por favor selecciona un Genset de la lista antes de guardar.");
-            return;
-        }
-
-        let utm;
-        try {
-            utm = proj4("EPSG:4326", "EPSG:32718", [miPosicion.lng, miPosicion.lat]);
-        } catch(e) {
-            alert("Error al calcular coordenadas UTM."); return;
-        }
-        
-        let este = utm[0].toFixed(0);
-        let norte = utm[1].toFixed(0);
-
-        let btnReg = document.getElementById("btn-registrar");
-        btnReg.innerText = "⏳ ENVIANDO...";
-
-        // ---------------------------------------------------------
-        // MÉTODO INFALIBLE: FORMULARIO OCULTO (Bypass CORS y File://)
-        // ---------------------------------------------------------
-        
-        // 1. Crear un iframe invisible en el HTML (si no existe)
         let iframe = document.getElementById("hidden_iframe");
         if (!iframe) {
             iframe = document.createElement("iframe");
-            iframe.name = "hidden_iframe";
-            iframe.id = "hidden_iframe";
-            iframe.style.display = "none";
-            document.body.appendChild(iframe);
+            iframe.name = "hidden_iframe"; iframe.id = "hidden_iframe";
+            iframe.style.display = "none"; document.body.appendChild(iframe);
         }
 
-        // 2. Crear un formulario invisible
         let form = document.createElement("form");
         form.action = URL_APPS_SCRIPT;
         form.method = "GET"; 
-        form.target = "hidden_iframe"; // Enviar la respuesta de Google al iframe oculto
+        form.target = "hidden_iframe"; 
         form.style.display = "none";
 
-        // 3. Crear los inputs con los datos
-        let inputNorte = document.createElement("input"); inputNorte.name = "norte"; inputNorte.value = norte; form.appendChild(inputNorte);
-        let inputEste = document.createElement("input"); inputEste.name = "este"; inputEste.value = este; form.appendChild(inputEste);
-        let inputNombre = document.createElement("input"); inputNombre.name = "nombre"; inputNombre.value = nombreGenset; form.appendChild(inputNombre);
+        let pNorte = document.createElement("input"); pNorte.name = "norte"; pNorte.value = norte; form.appendChild(pNorte);
+        let pEste = document.createElement("input"); pEste.name = "este"; pEste.value = este; form.appendChild(pEste);
+        let pNombre = document.createElement("input"); pNombre.name = "nombre"; pNombre.value = nombreGenset; form.appendChild(pNombre);
+        let pLugar = document.createElement("input"); pLugar.name = "lugar"; pLugar.value = lugarGenset; form.appendChild(pLugar);
 
         document.body.appendChild(form);
 
-        // 4. Qué hacer cuando Google termine de procesar el iframe
         iframe.onload = function() {
-            alert(`✅ Ubicación de ${nombreGenset} enviada con éxito.`);
+            alert(`✅ Ubicación de ${nombreGenset} en ${lugarGenset} registrada.`);
             btnReg.innerText = "🔋 GUARDAR UBICACIÓN AQUÍ";
-            selectGenset.value = ""; // Limpiar menú
-            
-            // Limpiar el formulario creado
+            selectGenset.value = ""; 
+            inputLugar.value = ""; 
             form.remove(); 
-            
-            // Refrescar los Gensets en el mapa 2 segundos después
             setTimeout(cargarGensets, 2000);
         };
 
-        // 5. Enviar el formulario
         form.submit();
-    }
-
-    window.onload = function() { actualizarTodo(); }
-</script>
-</body>
-</html>
     }
 
     window.onload = function() { actualizarTodo(); }
