@@ -83,6 +83,8 @@
     <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 MI UBICACIÓN (GPS)</button>
     <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">...</div>
 
+    <button id="btn-registrar" style="background:#27ae60; color:white; display:none;" onclick="registrarGensetGPS()">🔋 REGISTRAR GENSET AQUÍ</button>
+
     <div class="tab-container">
         <button class="tab-btn active" onclick="cambiarTab('voladuras')" id="tab-vol">💥 Voladura</button>
         <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
@@ -125,6 +127,9 @@
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
+
+    // PEGA AQUÍ LA URL DE TU APPS SCRIPT (Paso 1)
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbw_l7i1HblQlgyYKJhF5jE8mRiOqvcaUsWyxYQw-tZgUy3bG-ItSVwGsFV6eeWaX92T1w/exec";
 
     // --- DATA CORREGIDA Y APLANADA ---
     var datosEnergia = {
@@ -404,7 +409,6 @@
 
         zonasProgramadas.forEach(zona => {
             if (!zona.hora) return;
-            // Limpieza de hora (ignora segundos y espacios)
             const horaLimpia = zona.hora.trim().substring(0, 5); 
             const [hh, mm] = horaLimpia.split(':');
             
@@ -423,7 +427,6 @@
             if (dibujar && !isNaN(zona.n)) {
                 try {
                     const c = proj4("EPSG:32718", "EPSG:4326", [zona.e, zona.n]);
-                    // Agregamos tanto ROJAS como NARANJAS a la lista de chequeo
                     if (esPeligroso) zonasActivasAhora.push({ center: L.latLng(c[1], c[0]), radius: zona.r, name: zona.detalle, type: colorMapa });
                     const colorHex = (colorMapa === "red") ? "#e74c3c" : "#f39c12";
                     const opacidad = (colorMapa === "red") ? 0.5 : 0.2;
@@ -445,7 +448,6 @@
     function verificarInterferencias() {
         postesAfectados = []; 
         capaEnergia.eachLayer(function(layer) {
-            // Resetear al modo fantasma (casi invisible)
             if (layer instanceof L.CircleMarker) { layer.setStyle({ fillColor: "#ccc", color: "#000", radius: 2, weight: 0.5, opacity: 0.1, fillOpacity: 0.1 }); } 
             else if (layer instanceof L.Polyline) { layer.setStyle({ color: "#999", weight: 1, opacity: 0.1, dashArray: '5, 5' }); }
         });
@@ -517,6 +519,7 @@
                 document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
             } catch(e) {}
             btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
+            document.getElementById("btn-registrar").style.display = "block";
             if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
             else { marcadorVehiculo.setLatLng([lat, lon]); }
             chequearTormentas(); chequearProximidadVoladura();
@@ -554,6 +557,44 @@
         sensores.forEach(s => { if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) detectados.push(s.nombre); });
         if (detectados.length > 0) { box.style.display = "block"; box.innerHTML = `⚡ EN SENSOR: <br>${detectados.join(" y ")}`; }
         else { box.style.display = "none"; }
+    }
+
+    // --- NUEVO: REGISTRAR GENSET AL GOOGLE SHEET ---
+    function registrarGensetGPS() {
+        if (!miPosicion) {
+            alert("❌ Primero activa el GPS y espera a tener señal.");
+            return;
+        }
+
+        let nombreGenset = prompt("Ingresa el nombre o código del Genset (Ej. GEN-05):");
+        if (!nombreGenset || nombreGenset.trim() === "") return;
+
+        let utm;
+        try {
+            utm = proj4("EPSG:4326", "EPSG:32718", [miPosicion.lng, miPosicion.lat]);
+        } catch(e) {
+            alert("Error al calcular coordenadas UTM."); return;
+        }
+        
+        let este = utm[0].toFixed(0);
+        let norte = utm[1].toFixed(0);
+
+        let btnReg = document.getElementById("btn-registrar");
+        btnReg.innerText = "⏳ ENVIANDO...";
+
+        let urlCompleta = `${URL_APPS_SCRIPT}?norte=${norte}&este=${este}&nombre=${encodeURIComponent(nombreGenset)}`;
+
+        fetch(urlCompleta)
+        .then(response => response.text())
+        .then(data => {
+            alert(`✅ Genset ${nombreGenset} registrado en tu Google Sheet con éxito.`);
+            btnReg.innerText = "🔋 REGISTRAR GENSET AQUÍ";
+            cargarGensets(); 
+        })
+        .catch(error => {
+            alert("❌ Error al enviar. Revisa tu conexión a internet.");
+            btnReg.innerText = "🔋 REGISTRAR GENSET AQUÍ";
+        });
     }
 
     window.onload = function() { actualizarTodo(); }
