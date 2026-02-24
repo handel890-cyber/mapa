@@ -3,55 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SISTEMA GESTIÓN TOROMOCHO</title>
+    <title>SISTEMA GESTIÓN TOROMOCHO INTEGRADO</title>
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <style>
-        /* --- ESTILOS --- */
-        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', sans-serif; background: #000; }
-        #map { height: 100%; width: 100%; z-index: 1; }
-        
-        #menu-toggle { position: absolute; top: 10px; left: 10px; z-index: 1100; background: #2c3e50; color: white; border: none; border-radius: 4px; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
+    <style>
+        /* --- ESTILOS GENERALES Y NAVEGACIÓN --- */
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; background: #1e1e1e; color: #eee; }
+        
+        #top-nav {
+            position: absolute; top: 0; left: 0; width: 100%; height: 50px; background: #2c3e50;
+            display: flex; justify-content: center; align-items: center; z-index: 9999;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+        }
+        
+        .nav-btn {
+            background: #34495e; color: #bdc3c7; border: none; padding: 10px 20px; margin: 0 5px;
+            font-size: 1em; font-weight: bold; cursor: pointer; border-radius: 5px; transition: 0.3s;
+        }
+        .nav-btn.active { background: #e67e22; color: white; }
+        
+        /* Contenedores Principales */
+        .app-view {
+            position: absolute; top: 50px; left: 0; right: 0; bottom: 0;
+            display: none; height: calc(100% - 50px); width: 100%;
+        }
+        .app-view.active { display: block; }
+
+        /* =========================================================
+           ESTILOS: APP MAPA (LEAFLET)
+           ========================================================= */
+        #map { height: 100%; width: 100%; z-index: 1; }
+        #menu-toggle { position: absolute; top: 10px; left: 10px; z-index: 1100; background: #2c3e50; color: white; border: none; border-radius: 4px; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         #panel { 
             position: absolute; top: 60px; left: 10px; width: 280px; 
             background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
             border-radius: 8px; z-index: 1000; box-shadow: 0 4px 15px rgba(0,0,0,0.8);
-            max-height: 85vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
+            max-height: 80vh; overflow-y: auto; transition: transform 0.3s ease-in-out;
             transform: translateX(0);
         }
         #panel.escondido { transform: translateX(-360%); }
-
         h4 { margin: 10px 0 5px 0; font-size: 0.8em; color: #2ecc71; text-transform: uppercase; text-align: center; border-bottom: 1px solid #555; padding-bottom: 5px; }
-        
-        button { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
-        button:active { transform: scale(0.98); }
+        .map-btn { width: 100%; padding: 12px; margin: 3px 0; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; font-size: 0.75em; transition: 0.2s; }
+        .map-btn:active { transform: scale(0.98); }
         .btn-gps { background: #2980b9; color: white; }
         .btn-sync { background: #8e44ad; color: white; } 
         .btn-report { background: #d35400; color: white; border: 1px solid #e67e22; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
-        .btn-alert { 
-            background: #c0392b; color: white; 
-            border: 2px solid #e74c3c; margin-bottom: 15px; 
-            box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
-            animation: parpadeo-boton 1s infinite alternate; 
-            display: none; 
-        }
+        .btn-alert { background: #c0392b; color: white; border: 2px solid #e74c3c; margin-bottom: 15px; box-shadow: 0 0 15px rgba(231, 76, 60, 0.6); animation: parpadeo-boton 1s infinite alternate; display: none; }
         @keyframes parpadeo-boton { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(0.98); } }
-
         .tab-container { display: flex; justify-content: space-between; margin-bottom: 10px; }
-        .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; }
+        .tab-btn { width: 48%; background: #34495e; color: #bdc3c7; border: 1px solid #555; padding: 8px; cursor:pointer;}
         .tab-btn.active { background: #16a085; color: white; border-color: #16a085; }
-
         .list-item { background: rgba(255,255,255,0.05); padding: 8px; margin-bottom: 5px; border-radius: 4px; font-size: 0.75em; border-left: 4px solid grey; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
         .list-item:hover { background: rgba(255,255,255,0.1); }
         .genset-item { border-left-color: #9b59b6; }
         .genset-marker { background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black; display: flex; align-items: center; justify-content: center; }
         .genset-marker svg { width: 18px; height: 18px; fill: white; }
-        .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; }
-
+        .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; color: black; }
         #radio-silence-alert { position: absolute; bottom: 30px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate; }
         @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
-        
         #reloj-sistema { font-family: monospace; color: #f1c40f; text-align: center; font-size: 1.2em; margin-bottom: 10px; border: 1px solid #555; padding: 5px; background: rgba(0,0,0,0.3); }
         .storm-alert, .proximity-alert { padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
         .storm-alert { background: rgba(52, 152, 219, 0.2); border: 2px solid #3498db; color: #f1c40f; }
@@ -59,94 +70,193 @@
         .proximity-critical { background: rgba(231, 76, 60, 0.3); border: 2px solid #c0392b; color: #ff6b6b; }
         .footer-dev { margin-top: 20px; padding-top: 10px; border-top: 1px solid #555; text-align: center; font-size: 0.6em; color: #95a5a6; }
         .car-icon { width: 30px; height: 30px; filter: drop-shadow(0px 0px 3px black); }
-        
         #tabla-dinamica { width: 100%; border-collapse: collapse; font-size: 0.85em; color: #333; }
         #tabla-dinamica th { background: #2c3e50; color: white; padding: 10px; text-align: left; position: sticky; top: 0; }
         #tabla-dinamica td { padding: 8px; border-bottom: 1px solid #ddd; }
         #tabla-dinamica tr:nth-child(even) { background-color: #f2f2f2; }
         #btn-permiso { background: #16a085; font-size:0.7em; margin-bottom:10px; display:none; }
+
+        /* =========================================================
+           ESTILOS: APP CALCULADORA
+           ========================================================= */
+        #calc-view { display: none; height: calc(100% - 50px); width: 100%; }
+        #calc-view.active { display: flex; }
+        #sidebar { width: 420px; background: #2c3e50; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 20px rgba(0,0,0,0.6); z-index: 100; overflow-y: auto; flex-shrink: 0; border-right: 1px solid #444; }
+        #sidebar h2 { margin-top: 0; color: #f39c12; font-size: 1.4em; border-bottom: 2px solid #555; padding-bottom: 15px; }
+        #sidebar h3 { margin: 20px 0 10px 0; font-size: 1.1em; color: #bdc3c7; text-transform: uppercase; font-weight: 600; }
+        .input-group { background: rgba(0,0,0,0.25); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
+        .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        .input-row:last-child { margin-bottom: 0; }
+        .input-row label { font-size: 1em; color: #ddd; font-weight: 500; }
+        .input-row input { width: 140px; padding: 8px; font-size: 1em; background: #ecf0f1; border: 2px solid #95a5a6; border-radius: 6px; color: #2c3e50; font-weight: bold; text-align: right; }
+        .input-row input:focus { border-color: #f39c12; outline: none; background: #fff; }
+        #fileInput { padding: 15px; background: #34495e; border-radius: 8px; border: 2px dashed #7f8c8d; width: 100%; box-sizing: border-box; cursor: pointer; color: white; }
+        .btn-action { width: 100%; padding: 15px; margin-top: 8px; border: none; cursor: pointer; font-weight: bold; font-size: 1em; border-radius: 6px; text-align: left; padding-left: 20px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        .btn-action:hover { filter: brightness(1.1); }
+        .btn-action:active { transform: translateY(2px); }
+        .waiting { animation: parpadeo 1s infinite; border-left: 8px solid #f1c40f; background: #555; }
+        .done { border-left: 8px solid #27ae60; background: #34495e; color: #aaa; }
+        #btn-norte { background: #c0392b; color: white; }
+        #btn-este { background: #2980b9; color: white; }
+        #btn-dibujar { background: #e67e22; color: white; margin-top: 25px; }
+        .btn-calc { margin-top: 20px; padding: 18px; background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; font-weight: 800; font-size: 1.2em; cursor: pointer; border-radius: 8px; width: 100%; }
+        #output-box { background: #fff; padding: 10px; margin-top: 20px; border-radius: 6px; display: none; border-left: 6px solid #f39c12; }
+        .res-table { width: 100%; border-collapse: collapse; font-size: 0.85em; color: #2c3e50; }
+        .res-table th { background: #e67e22; color: white; padding: 8px 5px; text-align: center; font-size: 0.9em;}
+        .res-table td { padding: 6px 4px; border-bottom: 1px solid #ddd; text-align: center; vertical-align: middle; }
+        .res-table input[type="text"] { width: 90px; text-align: center; font-weight: bold; border: 1px solid #ccc; border-radius: 3px; padding: 4px; }
+        .res-table input[type="number"] { width: 60px; text-align: center; font-weight: bold; border: 2px solid #3498db; border-radius: 3px; padding: 4px; color: #2980b9; }
+        #canvas-main { flex-grow: 1; position: relative; overflow: hidden; background: #444; cursor: crosshair; }
+        #canvas-wrapper { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+        #canvas-wrapper img { display: block; pointer-events: none; }
+        #drawLayer { position: absolute; top: 0; left: 0; }
+        #hud { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 30px; font-size: 0.9em; pointer-events: none;}
+        @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
+        .badge { float: right; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 12px; font-size: 0.85em; }
+        .hint-text { font-size: 0.85em; color: #2ecc71; text-align: center; display: block; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;}
     </style>
 </head>
 <body>
 
-<div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫</div>
+<div id="top-nav">
+    <button class="nav-btn active" onclick="switchView('mapa-view', this)">🌎 Mapa Operativo</button>
+    <button class="nav-btn" onclick="switchView('calc-view', this)">📐 Calculadora Coordenadas</button>
+</div>
 
-<button id="menu-toggle" onclick="togglePanel()">☰</button>
+<div id="mapa-view" class="app-view active">
+    <div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫</div>
+    <button id="menu-toggle" onclick="togglePanel()">☰</button>
 
-<div id="panel">
-    <div id="reloj-sistema">--:--:--</div>
-    <button id="btn-permiso" onclick="pedirPermisoNotificaciones()">🔔 ACTIVAR ALERTAS</button>
+    <div id="panel">
+        <div id="reloj-sistema">--:--:--</div>
+        <button id="btn-permiso" class="map-btn" style="background: #16a085; font-size:0.7em; margin-bottom:10px; display:none;" onclick="pedirPermisoNotificaciones()">🔔 ACTIVAR ALERTAS</button>
 
-    <div id="storm-box" class="storm-alert"></div>
-    <div id="proximity-box" class="proximity-alert"></div>
+        <div id="storm-box" class="storm-alert"></div>
+        <div id="proximity-box" class="proximity-alert"></div>
 
-    <button id="btnGps" class="btn-gps" onclick="iniciarSeguimiento()">📍 MI UBICACIÓN (GPS)</button>
-    <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">...</div>
+        <button id="btnGps" class="map-btn btn-gps" onclick="iniciarSeguimiento()">📍 MI UBICACIÓN (GPS)</button>
+        <div id="utm-display" style="text-align:center; font-size:0.7em; color:#f39c12; margin-bottom:10px; font-family:monospace;">...</div>
 
-    <div class="tab-container">
-        <button class="tab-btn active" onclick="cambiarTab('voladuras')" id="tab-vol">💥 Voladura</button>
-        <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
+        <div class="tab-container">
+            <button class="tab-btn active" onclick="cambiarTab('voladuras')" id="tab-vol">💥 Voladura</button>
+            <button class="tab-btn" onclick="cambiarTab('gensets')" id="tab-gen">⚡ Gensets</button>
+        </div>
+
+        <button class="map-btn btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
+
+        <div id="view-voladuras">
+            <button id="btn-interferencia" class="map-btn btn-alert" onclick="mostrarTablaInterferencias()">🚨 VER POSTES AFECTADOS</button>
+            <h4 style="color:#e74c3c">Programación Hoy</h4>
+            <div id="lista-voladuras"><em style="font-size:0.7em; color:#7f8c8d;">Cargando...</em></div>
+        </div>
+
+        <div id="view-gensets" style="display:none;">
+            <button id="btn-reporte" class="map-btn btn-report" onclick="cargarReporteNativo()">📄 VER REPORTE TÉCNICO</button>
+            
+            <div id="controles-registro-genset" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #9b59b6;">
+                <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📍 Genset a posicionar:</label>
+                <select id="select-genset-maestro" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
+                    <option value="">Cargando Gensets...</option>
+                </select>
+                
+                <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📝 Lugar / Referencia:</label>
+                <input type="text" id="input-lugar" placeholder="Ej. Truck Shop, Fase 3..." style="width: 100%; padding: 8px; margin-bottom: 15px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
+                
+                <button id="btn-registrar" class="map-btn" style="background:#27ae60; color:white; margin:0;" onclick="registrarGensetGPS()">🔋 GUARDAR UBICACIÓN AQUÍ</button>
+            </div>
+
+            <h4 style="color:#9b59b6">Generadores Activos</h4>
+            <div id="lista-gensets"><em style="font-size:0.7em; color:#7f8c8d;">Sin datos...</em></div>
+        </div>
+        <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
     </div>
 
-    <button class="btn-sync" onclick="actualizarTodo()">🔄 ACTUALIZAR DATOS</button>
-
-    <div id="view-voladuras">
-        <button id="btn-interferencia" class="btn-alert" onclick="mostrarTablaInterferencias()">🚨 VER POSTES AFECTADOS</button>
-        <h4 style="color:#e74c3c">Programación Hoy</h4>
-        <div id="lista-voladuras"><em style="font-size:0.7em; color:#7f8c8d;">Cargando...</em></div>
+    <div id="modal-reporte" style="display:none; position:fixed; top:50px; left:0; width:100%; height:calc(100% - 50px); background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
+        <div style="background:white; width:95%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+            <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
+                <span id="modal-titulo" style="font-weight:bold;">📋 REPORTE</span>
+                <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px;">X</button>
+            </div>
+            <div id="contenedor-tabla" style="overflow:auto; padding:0; height:100%; background:white;">
+                <div style="padding:20px; text-align:center; color:grey;">Cargando...</div>
+            </div>
+        </div>
     </div>
 
-    <div id="view-gensets" style="display:none;">
-        <button id="btn-reporte" class="btn-report" onclick="cargarReporteNativo()">📄 VER REPORTE TÉCNICO</button>
+    <div id="map"></div>
+</div>
+
+<div id="calc-view" class="app-view">
+    <div id="sidebar">
+        <h2>Coordenadas de Voladura</h2>
+        <h3>1. Cargar Plano</h3>
+        <input type="file" id="fileInput" accept="image/*,application/pdf">
+
+        <h3>2. Calibrar Grilla</h3>
+        <div class="input-group">
+            <div class="input-row"><label>Norte Base:</label><input type="number" id="valNorte" value=""></div>
+            <div class="input-row"><label>Este Base:</label><input type="number" id="valEste" value=""></div>
+            <div class="input-row"><label>Distancia (m):</label><input type="number" id="valDist" value=""></div>
+        </div>
         
-        <div id="controles-registro-genset" style="display:none; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 5px; margin-bottom: 15px; border: 1px solid #9b59b6;">
-            <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📍 Genset a posicionar:</label>
-            <select id="select-genset-maestro" style="width: 100%; padding: 8px; margin-bottom: 10px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
-                <option value="">Cargando Gensets...</option>
-            </select>
-            
-            <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📝 Lugar / Referencia:</label>
-            <input type="text" id="input-lugar" placeholder="Ej. Truck Shop, Fase 3..." style="width: 100%; padding: 8px; margin-bottom: 15px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
-            
-            <button id="btn-registrar" style="background:#27ae60; color:white; margin:0;" onclick="registrarGensetGPS()">🔋 GUARDAR UBICACIÓN AQUÍ</button>
-        </div>
+        <button id="btn-norte" class="btn-action" onclick="activarModo('norte')">1. Definir Norte <span class="badge" id="badge-norte">0/2</span></button>
+        <button id="btn-este" class="btn-action" onclick="activarModo('este')">2. Definir Este <span class="badge" id="badge-este">0/2</span></button>
 
-        <h4 style="color:#9b59b6">Generadores Activos</h4>
-        <div id="lista-gensets"><em style="font-size:0.7em; color:#7f8c8d;">Sin datos...</em></div>
+        <h3>3. Voladuras</h3>
+        <button id="btn-dibujar" class="btn-action" onclick="activarModo('dibujo')">3. Dibujar Zona <span class="badge" id="badge-dibujo">0 pts</span></button>
+        
+        <span class="hint-text">💡 <b>ENTER:</b> Guardar Voladura<br>🖱️ <b>CLIC DERECHO:</b> Deshacer Punto</span>
+
+        <button class="btn-calc" onclick="calcularTodo()">✅ CALCULAR DATOS</button>
+
+        <div id="output-box"></div>
+        
+        <button onclick="reiniciarCalculadora()" style="margin-top:20px; background:transparent; border:1px solid #555; color:#777; padding:10px; cursor:pointer; width:100%; border-radius:6px; font-weight:bold;">🔄 Limpiar Plano Actual</button>
     </div>
-    <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
-</div>
 
-<div id="modal-reporte" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
-    <div style="background:white; width:95%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
-        <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
-            <span id="modal-titulo" style="font-weight:bold;">📋 REPORTE</span>
-            <button onclick="cerrarReporte()" style="background:#e74c3c; border:none; color:white; font-weight:bold; width:30px; height:30px; border-radius:50%; cursor:pointer; font-size:16px;">X</button>
-        </div>
-        <div id="contenedor-tabla" style="overflow:auto; padding:0; height:100%; background:white;">
-            <div style="padding:20px; text-align:center; color:grey;">Cargando...</div>
+    <div id="canvas-main">
+        <div id="hud">Zoom: 100%</div>
+        <div id="canvas-wrapper">
+            <img id="planoImg">
+            <canvas id="drawLayer"></canvas>
         </div>
     </div>
 </div>
-
-<div id="map"></div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/proj4js/2.8.0/proj4.js"></script>
 
 <script>
+    // -----------------------------------------------------------------
+    // LÓGICA DE NAVEGACIÓN ENTRE PESTAÑAS (MAPA / CALCULADORA)
+    // -----------------------------------------------------------------
+    function switchView(viewId, btnElement) {
+        document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(viewId).classList.add('active');
+        btnElement.classList.add('active');
+        
+        // Si cambiamos al mapa, le forzamos un redibujo para evitar errores visuales
+        if(viewId === 'mapa-view' && map) {
+            setTimeout(() => { map.invalidateSize(); }, 100);
+        }
+    }
+
+    // =================================================================
+    // CÓDIGO DEL MAPA (LEAFLET + GOOGLE SHEETS)
+    // =================================================================
     var LINK_VOLADURAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=0&single=true&output=csv";
     var LINK_GENSETS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=2066463473&single=true&output=csv"; 
     var LINK_REPORTE_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQ5BO75yc_nkIUxS-nPmodwWpYnbeIdILokPgV4ncqCPB09_23bp_zMHDVRXVmkBoP6gihaB1aVE-yJ/pub?gid=528288056&single=true&output=csv";
-
-    // ⚠️ REEMPLAZA ESTO CON LA URL QUE GENERASTE EN TU APPS SCRIPT AL HACER "NUEVA IMPLEMENTACIÓN"
+    
+    // REEMPLAZA CON LA URL DE TU APPS SCRIPT
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwXOY3ilI2bv6ffdiU90BFn8AAXN0xwEYojPG0-v9PD_dXi98JpY64qvcVtilu7hfIxhw/exec";
 
-    // --- DATA CORREGIDA Y APLANADA ---
+    // --- DATA CABLES Y POSTES ---
     var datosEnergia = {
       "type": "FeatureCollection",
       "features": [
-        // PUNTOS (POSTES)
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144659, -11.620111 ] }, "properties": { "name": "P4:R1-DT" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144283, -11.620266 ] }, "properties": { "name": "P3:R1-DT" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.143304, -11.620668 ] }, "properties": { "name": "P2A:R1-DT" } },
@@ -256,7 +366,6 @@
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.145482, -11.599248 ] }, "properties": { "name": "P.27" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.144392, -11.597372 ] }, "properties": { "name": "P.28" } },
         { "type": "Feature", "geometry": { "type": "Point", "coordinates": [ -76.142418, -11.596819 ] }, "properties": { "name": "P.29" } },
-        // LÍNEAS (CABLES)
         { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.144659,-11.620110], [-76.144689,-11.620009], [-76.144674,-11.619860], [-76.144641,-11.619535], [-76.144550,-11.618555], [-76.144576,-11.617749]] }, "properties": { "name": "Drv. Antiguo Truck Shop", "stroke": "#ffff00" } },
         { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142323,-11.621057], [-76.142628,-11.620956], [-76.143304,-11.620664], [-76.144282,-11.620263], [-76.144659,-11.620106]] }, "properties": { "name": "Anillo Mina C1", "stroke": "#55ffff" } },
         { "type": "Feature", "geometry": { "type": "LineString", "coordinates": [[-76.142327,-11.621024], [-76.142632,-11.620843], [-76.142945,-11.620642], [-76.143475,-11.620225], [-76.143482,-11.619557], [-76.142415,-11.619263], [-76.141176,-11.618905], [-76.140175,-11.618956], [-76.138995,-11.619103], [-76.137911,-11.619143], [-76.137034,-11.618290], [-76.135969,-11.617146], [-76.135784,-11.616920], [-76.135223,-11.616307], [-76.134679,-11.615676], [-76.134532,-11.615523], [-76.134301,-11.615268], [-76.132350,-11.614074], [-76.131300,-11.613201], [-76.130537,-11.612636], [-76.130011,-11.611643], [-76.129915,-11.609930], [-76.129855,-11.609084], [-76.129621,-11.607511], [-76.129519,-11.606821], [-76.129442,-11.606167], [-76.129717,-11.605728], [-76.130488,-11.604624], [-76.130949,-11.604339], [-76.131240,-11.604148], [-76.131421,-11.604021], [-76.131622,-11.603543], [-76.131685,-11.603344], [-76.131666,-11.602948], [-76.131616,-11.602349], [-76.131549,-11.601355], [-76.131724,-11.601336], [-76.132061,-11.600936]] }, "properties": { "name": "L.3", "stroke": "#ffff00" } },
@@ -362,8 +471,7 @@
         var btn = document.querySelector(".btn-sync");
         btn.innerHTML = "⏳ CARGANDO...";
         try {
-            // Reemplaza la línea del fetch por esta:
-		const response = await fetch(LINK_VOLADURAS + '&t=' + Date.now(), { cache: 'no-store', pragma: 'no-cache' });
+            const response = await fetch(LINK_VOLADURAS + '&t=' + Date.now(), { cache: 'no-store', pragma: 'no-cache' });
             const text = await response.text();
             zonasProgramadas = [];
             const filas = text.split('\n');
@@ -383,8 +491,7 @@
     async function cargarGensets() {
         if (!LINK_GENSETS.startsWith("http")) return; 
         try {
-            // Reemplaza la línea del fetch por esta:
-		const response = await fetch(LINK_GENSETS + '&t=' + Date.now(), { cache: 'no-store', pragma: 'no-cache' });
+            const response = await fetch(LINK_GENSETS + '&t=' + Date.now(), { cache: 'no-store', pragma: 'no-cache' });
             const text = await response.text();
             const filas = text.split('\n');
             capaGensets.clearLayers();
@@ -597,38 +704,22 @@
         else { box.style.display = "none"; }
     }
 
-    // --- FORMULARIO OCULTO PARA EVITAR CORS ---
     function registrarGensetGPS() {
-        if (!miPosicion) {
-            alert("❌ Primero activa el GPS y espera a tener señal.");
-            return;
-        }
-
+        if (!miPosicion) { alert("❌ Primero activa el GPS y espera a tener señal."); return; }
         let selectGenset = document.getElementById("select-genset-maestro");
         let inputLugar = document.getElementById("input-lugar");
-        
         let nombreGenset = selectGenset.value;
         let lugarGenset = inputLugar.value;
 
-        if (!nombreGenset || nombreGenset.trim() === "") {
-            alert("⚠️ Por favor selecciona un Genset de la lista.");
-            return;
-        }
-        if (!lugarGenset || lugarGenset.trim() === "") {
-            alert("⚠️ Por favor escribe el Lugar o Referencia.");
-            return;
-        }
+        if (!nombreGenset || nombreGenset.trim() === "") { alert("⚠️ Por favor selecciona un Genset de la lista."); return; }
+        if (!lugarGenset || lugarGenset.trim() === "") { alert("⚠️ Por favor escribe el Lugar o Referencia."); return; }
 
         let utm;
-        try {
-            utm = proj4("EPSG:4326", "EPSG:32718", [miPosicion.lng, miPosicion.lat]);
-        } catch(e) {
-            alert("Error al calcular coordenadas UTM."); return;
-        }
+        try { utm = proj4("EPSG:4326", "EPSG:32718", [miPosicion.lng, miPosicion.lat]); } 
+        catch(e) { alert("Error al calcular coordenadas UTM."); return; }
         
         let este = utm[0].toFixed(0);
         let norte = utm[1].toFixed(0);
-
         let btnReg = document.getElementById("btn-registrar");
         btnReg.innerText = "⏳ ENVIANDO...";
 
@@ -660,11 +751,338 @@
             form.remove(); 
             setTimeout(cargarGensets, 2000);
         };
-
         form.submit();
     }
 
-    window.onload = function() { actualizarTodo(); }
+    // Inicializar mapa al cargar
+    window.addEventListener('load', actualizarTodo);
+
+    // =================================================================
+    // CÓDIGO DE LA CALCULADORA DE VOLADURAS
+    // =================================================================
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    let calcModo = null; 
+    let clicsNorte = []; let clicsEste = []; 
+    let poligonoActual = []; 
+    let poligonosGuardados = []; 
+    let resultadosGlobales = [];
+
+    let transform = { x: 0, y: 0, scale: 1 };
+    let isPanning = false, startPanX = 0, startPanY = 0;
+
+    let imgCalc = document.getElementById('planoImg');
+    let canvasCalc = document.getElementById('drawLayer');
+    let ctxCalc = canvasCalc.getContext('2d');
+    let wrapperCalc = document.getElementById('canvas-wrapper');
+    let mainContainerCalc = document.getElementById('canvas-main');
+    let hudCalc = document.getElementById('hud');
+
+    document.getElementById('fileInput').addEventListener('change', async function(e){
+        let file = e.target.files[0];
+        if(!file) return;
+        if(file.type === 'application/pdf') {
+            let fileReader = new FileReader();
+            fileReader.onload = async function() {
+                let typedarray = new Uint8Array(this.result);
+                let pdf = await pdfjsLib.getDocument(typedarray).promise;
+                let page = await pdf.getPage(1);
+                let viewport = page.getViewport({scale: 3.0}); 
+                let tempCanvas = document.createElement('canvas');
+                let tempCtx = tempCanvas.getContext('2d');
+                tempCanvas.height = viewport.height; tempCanvas.width = viewport.width;
+                await page.render({canvasContext: tempCtx, viewport: viewport}).promise;
+                imgCalc.src = tempCanvas.toDataURL();
+                configurarEntorno(viewport.width, viewport.height);
+            };
+            fileReader.readAsArrayBuffer(file);
+        } else {
+            let reader = new FileReader();
+            reader.onload = function(event){ 
+                imgCalc.src = event.target.result; 
+                imgCalc.onload = () => configurarEntorno(imgCalc.width, imgCalc.height); 
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    function configurarEntorno(w, h) {
+        canvasCalc.width = w; canvasCalc.height = h;
+        wrapperCalc.style.width = w + "px"; wrapperCalc.style.height = h + "px";
+        let scaleStart = Math.min((mainContainerCalc.clientWidth - 50)/w, (mainContainerCalc.clientHeight - 50)/h);
+        transform.scale = scaleStart;
+        transform.x = (mainContainerCalc.clientWidth - w * scaleStart) / 2;
+        transform.y = (mainContainerCalc.clientHeight - h * scaleStart) / 2;
+        actualizarTransform();
+    }
+
+    mainContainerCalc.addEventListener('wheel', function(e) {
+        e.preventDefault();
+        const delta = -Math.sign(e.deltaY);
+        let newScale = transform.scale + (delta * 0.15 * transform.scale);
+        if (newScale < 0.05) newScale = 0.05;
+        let mouseX = e.clientX - mainContainerCalc.getBoundingClientRect().left - 420; // -420 por el sidebar
+        let mouseY = e.clientY - mainContainerCalc.getBoundingClientRect().top - 50;  // -50 por el nav top
+        transform.x = mouseX - ((mouseX - transform.x) / transform.scale * newScale);
+        transform.y = mouseY - ((mouseY - transform.y) / transform.scale * newScale);
+        transform.scale = newScale;
+        actualizarTransform();
+    });
+
+    mainContainerCalc.addEventListener('mousedown', function(e) {
+        if (e.button === 1 || e.getModifierState("Space")) {
+            e.preventDefault(); isPanning = true;
+            startPanX = e.clientX - transform.x; startPanY = e.clientY - transform.y;
+            mainContainerCalc.style.cursor = 'grabbing';
+        }
+    });
+
+    window.addEventListener('mousemove', function(e) {
+        if (isPanning && document.getElementById('calc-view').classList.contains('active')) { 
+            transform.x = e.clientX - startPanX; transform.y = e.clientY - startPanY; actualizarTransform(); 
+        }
+    });
+    window.addEventListener('mouseup', () => { isPanning = false; mainContainerCalc.style.cursor = 'crosshair'; });
+    
+    window.addEventListener('keydown', (e) => { 
+        if(document.getElementById('calc-view').classList.contains('active')) {
+            if(e.code === 'Space') mainContainerCalc.style.cursor = 'grab'; 
+            if(e.code === 'Enter') {
+                if (calcModo === 'dibujo' && poligonoActual.length > 2) guardarPoligono();
+            }
+        }
+    });
+    window.addEventListener('keyup', (e) => { if(e.code === 'Space') mainContainerCalc.style.cursor = 'crosshair'; });
+
+    function actualizarTransform() {
+        wrapperCalc.style.transform = `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`;
+        hudCalc.innerText = "Zoom: " + Math.round(transform.scale * 100) + "%";
+    }
+
+    wrapperCalc.addEventListener('mousedown', function(e){
+        if (e.button !== 0 || e.getModifierState("Space") || !calcModo) return; 
+        
+        let rect = imgCalc.getBoundingClientRect();
+        let x = (e.clientX - rect.left) * (imgCalc.width / rect.width);
+        let y = (e.clientY - rect.top) * (imgCalc.height / rect.height);
+
+        if(calcModo === 'norte') { clicsNorte.push(y); if(clicsNorte.length === 2) calcModo = null; }
+        else if(calcModo === 'este') { clicsEste.push(x); if(clicsEste.length === 2) calcModo = null; }
+        else if(calcModo === 'dibujo') { poligonoActual.push({x:x, y:y}); }
+        actualizarUICalc(); renderCalc();
+    });
+
+    wrapperCalc.addEventListener('contextmenu', function(e){
+        e.preventDefault(); 
+        if (calcModo === 'dibujo' && poligonoActual.length > 0) {
+            poligonoActual.pop(); 
+            actualizarUICalc(); 
+            renderCalc();
+        }
+    });
+
+    function activarModo(n) {
+        calcModo = n;
+        if(calcModo === 'norte') clicsNorte = [];
+        if(calcModo === 'este') clicsEste = [];
+        if(calcModo === 'dibujo') {
+            if(poligonoActual.length > 2) guardarPoligono(); 
+            poligonoActual = []; 
+        }
+        actualizarUICalc(); renderCalc();
+    }
+
+    function guardarPoligono() {
+        if(poligonoActual.length > 2) {
+            poligonosGuardados.push([...poligonoActual]); 
+            poligonoActual = []; 
+            actualizarUICalc(); renderCalc();
+        } else {
+            alert("Dibuja al menos 3 puntos antes de guardar.");
+        }
+    }
+
+    function actualizarUICalc() {
+        document.querySelectorAll('#calc-view .btn-action').forEach(b => b.classList.remove('waiting', 'done'));
+        
+        let btnN = document.getElementById('btn-norte');
+        document.getElementById('badge-norte').innerText = clicsNorte.length + "/2";
+        if(calcModo === 'norte') btnN.classList.add('waiting'); else if(clicsNorte.length === 2) btnN.classList.add('done');
+
+        let btnE = document.getElementById('btn-este');
+        document.getElementById('badge-este').innerText = clicsEste.length + "/2";
+        if(calcModo === 'este') btnE.classList.add('waiting'); else if(clicsEste.length === 2) btnE.classList.add('done');
+
+        let btnD = document.getElementById('btn-dibujar');
+        document.getElementById('badge-dibujo').innerText = poligonoActual.length + " pts";
+        if(calcModo === 'dibujo') {
+            btnD.classList.add('waiting');
+        } else {
+            if(poligonosGuardados.length > 0 || poligonoActual.length > 2) btnD.classList.add('done');
+        }
+    }
+
+    function renderCalc() {
+        ctxCalc.clearRect(0,0, canvasCalc.width, canvasCalc.height);
+        
+        ctxCalc.strokeStyle = '#e74c3c'; ctxCalc.lineWidth = 4;
+        clicsNorte.forEach(y => { ctxCalc.beginPath(); ctxCalc.moveTo(0, y); ctxCalc.lineTo(canvasCalc.width, y); ctxCalc.stroke(); });
+        ctxCalc.strokeStyle = '#3498db'; ctxCalc.lineWidth = 4;
+        clicsEste.forEach(x => { ctxCalc.beginPath(); ctxCalc.moveTo(x, 0); ctxCalc.lineTo(x, canvasCalc.height); ctxCalc.stroke(); });
+        
+        poligonosGuardados.forEach((poli, i) => { 
+            let nombreActual = resultadosGlobales[i] ? resultadosGlobales[i].nombre : `Voladura ${i+1}`;
+            dibujarPoligono(poli, '#8e44ad', nombreActual); 
+        });
+
+        if(poligonoActual.length > 0) {
+            dibujarPoligono(poligonoActual, '#e67e22', null);
+            poligonoActual.forEach(p => { 
+                ctxCalc.beginPath(); ctxCalc.arc(p.x, p.y, 2, 0, Math.PI*2); 
+                ctxCalc.fillStyle = 'white'; ctxCalc.fill(); 
+                ctxCalc.lineWidth = 1; ctxCalc.strokeStyle = '#000'; ctxCalc.stroke();
+            });
+        }
+
+        resultadosGlobales.forEach((res) => {
+            ctxCalc.beginPath(); 
+            ctxCalc.arc(res.cx, res.cy, res.radio / res.escala, 0, Math.PI*2);
+            ctxCalc.strokeStyle = '#ff00ff'; ctxCalc.lineWidth = 4; ctxCalc.setLineDash([20,10]); ctxCalc.stroke();
+            ctxCalc.setLineDash([]); 
+        });
+    }
+
+    function dibujarPoligono(puntos, color, textoCentro) {
+        if(puntos.length === 0) return;
+        ctxCalc.beginPath(); ctxCalc.moveTo(puntos[0].x, puntos[0].y);
+        for(let i=1; i<puntos.length; i++) ctxCalc.lineTo(puntos[i].x, puntos[i].y);
+        if(puntos.length>2) { 
+            ctxCalc.closePath(); 
+            ctxCalc.fillStyle = color === '#e67e22' ? 'rgba(230, 126, 34, 0.4)' : 'rgba(142, 68, 173, 0.4)'; 
+            ctxCalc.fill(); 
+        }
+        ctxCalc.strokeStyle = color; ctxCalc.lineWidth = 2; ctxCalc.stroke();
+
+        if(textoCentro && puntos.length > 2) {
+            let sumX = 0, sumY = 0;
+            puntos.forEach(p => { sumX += p.x; sumY += p.y; });
+            let centroX = sumX / puntos.length;
+            let centroY = sumY / puntos.length;
+
+            ctxCalc.fillStyle = 'white'; 
+            ctxCalc.font = "bold 26px Arial";
+            ctxCalc.textAlign = "center";
+            ctxCalc.textBaseline = "middle";
+            ctxCalc.shadowColor = "black";
+            ctxCalc.shadowBlur = 6;
+            ctxCalc.fillText(textoCentro, centroX, centroY);
+            ctxCalc.shadowBlur = 0;
+            ctxCalc.textAlign = "left";
+            ctxCalc.textBaseline = "alphabetic";
+        }
+    }
+
+    function calcularTodo() {
+        if(poligonoActual.length > 2) { guardarPoligono(); }
+        if(clicsNorte.length < 2 || clicsEste.length < 2 || poligonosGuardados.length === 0) {
+            return alert("Faltan datos de calibración o no has dibujado ninguna voladura.");
+        }
+
+        let norteBase = parseFloat(document.getElementById('valNorte').value);
+        let esteBase = parseFloat(document.getElementById('valEste').value);
+        let distanciaReal = parseFloat(document.getElementById('valDist').value);
+
+        let m_px_Y = distanciaReal / Math.abs(clicsNorte[1] - clicsNorte[0]);
+        let m_px_X = distanciaReal / Math.abs(clicsEste[1] - clicsEste[0]);
+        let m_px_Promedio = (m_px_Y + m_px_X) / 2;
+
+        resultadosGlobales = [];
+
+        poligonosGuardados.forEach((poli, index) => {
+            let sumX=0, sumY=0;
+            poli.forEach(p => { sumX+=p.x; sumY+=p.y; });
+            let cx_px = sumX / poli.length;
+            let cy_px = sumY / poli.length;
+
+            let norteFinal = norteBase - ((cy_px - clicsNorte[0]) * m_px_Y); 
+            let esteFinal = esteBase + ((cx_px - clicsEste[0]) * m_px_X);   
+
+            let maxRadio_px = 0;
+            poli.forEach(p => {
+                let d = Math.hypot(p.x - cx_px, p.y - cy_px);
+                if(d > maxRadio_px) maxRadio_px = d;
+            });
+            let radioCalculado = Math.ceil((maxRadio_px * m_px_Promedio) + 500);
+
+            resultadosGlobales.push({
+                nombre: `Voladura ${index + 1}`,
+                norte: norteFinal.toFixed(0),
+                este: esteFinal.toFixed(0),
+                radio: radioCalculado,
+                cx: cx_px,
+                cy: cy_px,
+                escala: m_px_Promedio
+            });
+        });
+
+        dibujarTabla();
+        renderCalc();
+    }
+
+    function dibujarTabla() {
+        let box = document.getElementById('output-box');
+        box.style.display = 'block';
+        
+        let html = `
+        <table class="res-table">
+            <tr>
+                <th>Nombre</th>
+                <th>Norte</th>
+                <th>Este</th>
+                <th>Radio (m)</th>
+            </tr>`;
+
+        resultadosGlobales.forEach((res, index) => {
+            html += `
+            <tr>
+                <td><input type="text" value="${res.nombre}" onchange="cambiarNombre(${index}, this.value)"></td>
+                <td>${res.norte}</td>
+                <td>${res.este}</td>
+                <td><input type="number" value="${res.radio}" oninput="cambiarRadio(${index}, this.value)"></td>
+            </tr>`;
+        });
+        
+        html += `</table>`;
+        box.innerHTML = html;
+    }
+
+    function cambiarRadio(index, nuevoValor) {
+        let val = parseFloat(nuevoValor);
+        if(!isNaN(val)) {
+            resultadosGlobales[index].radio = val;
+            renderCalc(); 
+        }
+    }
+
+    function cambiarNombre(index, nuevoTexto) {
+        resultadosGlobales[index].nombre = nuevoTexto;
+        renderCalc(); 
+    }
+
+    function reiniciarCalculadora() {
+        calcModo = null;
+        clicsNorte = []; clicsEste = [];
+        poligonoActual = []; poligonosGuardados = []; resultadosGlobales = [];
+        imgCalc.src = "";
+        document.getElementById('fileInput').value = "";
+        document.getElementById('output-box').style.display = "none";
+        document.getElementById('valNorte').value = "";
+        document.getElementById('valEste').value = "";
+        document.getElementById('valDist').value = "";
+        actualizarUICalc();
+        renderCalc();
+    }
 </script>
+
 </body>
 </html>
