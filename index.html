@@ -669,7 +669,8 @@
     iconSize: [30, 30], 
     iconAnchor: [15, 15] 
 });
-    var marcadorVehiculo = null; var miPosicion = null;
+    var marcadorVehiculo = null; 
+    var miPosicion = null;
 
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
@@ -691,16 +692,23 @@
             btn.innerHTML = "✅ GPS ACTIVO"; 
             btn.style.backgroundColor = "#27ae60";
             
+            // Mostrar los controles
             document.getElementById("controles-registro-genset").style.display = "block";
             
-            // Aquí está el cambio clave: usamos setView en lugar de flyTo
-            if (!marcadorVehiculo) { 
-                marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); 
-                map.setView([lat, lon], 16); 
-            } else { 
-                marcadorVehiculo.setLatLng([lat, lon]); 
-                map.setView([lat, lon], 16); // Para que la cámara te siga moviendo si caminas
-            }
+            // REGLA 1 PARA iOS: Forzar al mapa a "despertar" y recalcular su tamaño
+            map.invalidateSize();
+            
+            // REGLA 2 Y 3 PARA iOS: Retraso de 100ms y usar el pin azul nativo
+            setTimeout(() => {
+                if (!marcadorVehiculo) { 
+                    // Usamos el marcador nativo sin ícono custom para evitar bloqueos gráficos
+                    marcadorVehiculo = L.marker([lat, lon]).addTo(capaGPS); 
+                    map.setView([lat, lon], 16); 
+                } else { 
+                    marcadorVehiculo.setLatLng([lat, lon]); 
+                    map.setView([lat, lon], 16); 
+                }
+            }, 100);
             
             chequearTormentas(); 
             chequearProximidadVoladura();
@@ -708,7 +716,12 @@
         }, (err) => { 
             btn.innerHTML = "⚠️ SIN SEÑAL"; 
             btn.style.backgroundColor = "#c0392b"; 
-        }, { enableHighAccuracy: true });
+            alert("Detalle iOS: " + err.message);
+        }, { 
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 15000
+        });
     }
 
     function chequearProximidadVoladura() {
