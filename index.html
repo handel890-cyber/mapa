@@ -9,33 +9,37 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 
     <style>
-        /* --- ESTILOS GENERALES Y NAVEGACIÓN --- */
+        /* --- ESTILOS GENERALES --- */
         body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; font-family: 'Segoe UI', Roboto, sans-serif; background: #1e1e1e; color: #eee; }
         
-        #top-nav {
-            position: absolute; top: 0; left: 0; width: 100%; height: 50px; background: #2c3e50;
-            display: flex; justify-content: center; align-items: center; z-index: 9999;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5);
-        }
-        
-        .nav-btn {
-            background: #34495e; color: #bdc3c7; border: none; padding: 10px 20px; margin: 0 5px;
-            font-size: 1em; font-weight: bold; cursor: pointer; border-radius: 5px; transition: 0.3s;
-        }
-        .nav-btn.active { background: #e67e22; color: white; }
-        
-        /* Contenedores Principales */
+        /* Contenedores Principales a pantalla completa */
         .app-view {
-            position: absolute; top: 50px; left: 0; right: 0; bottom: 0;
-            display: none; height: calc(100% - 50px); width: 100%;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            display: none; height: 100%; width: 100%;
         }
         .app-view.active { display: block; }
+
+        /* --- SWITCHER FLOTANTE (DOCK MINIMALISTA) --- */
+        #app-switcher {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(33, 47, 61, 0.85); backdrop-filter: blur(5px);
+            padding: 8px 15px; border-radius: 30px; display: flex; gap: 15px;
+            z-index: 10000; box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .switch-btn {
+            background: transparent; color: white; border: none; width: 45px; height: 45px;
+            border-radius: 50%; font-size: 1.5em; cursor: pointer; transition: 0.3s;
+            display: flex; justify-content: center; align-items: center; padding: 0;
+        }
+        .switch-btn:hover { background: rgba(255,255,255,0.1); transform: scale(1.1); }
+        .switch-btn.active { background: #e67e22; box-shadow: 0 0 12px #e67e22; }
 
         /* =========================================================
            ESTILOS: APP MAPA (LEAFLET)
            ========================================================= */
         #map { height: 100%; width: 100%; z-index: 1; }
-        #menu-toggle { position: absolute; top: 10px; left: 10px; z-index: 1100; background: #2c3e50; color: white; border: none; border-radius: 4px; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
+        .menu-toggle { position: absolute; top: 10px; left: 10px; z-index: 1100; background: #2c3e50; color: white; border: none; border-radius: 4px; width: 40px; height: 40px; font-size: 1.5em; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.5); }
         #panel { 
             position: absolute; top: 60px; left: 10px; width: 280px; 
             background: rgba(33, 47, 61, 0.95); color: white; padding: 10px; 
@@ -61,7 +65,7 @@
         .genset-marker { background: #8e44ad; border-radius: 50%; border: 2px solid white; box-shadow: 0 0 5px black; display: flex; align-items: center; justify-content: center; }
         .genset-marker svg { width: 18px; height: 18px; fill: white; }
         .leaflet-popup-content { font-size: 1.1em; line-height: 1.4; color: black; }
-        #radio-silence-alert { position: absolute; bottom: 30px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate; }
+        #radio-silence-alert { position: absolute; bottom: 80px; left: 20px; right: 20px; background: rgba(231, 76, 60, 0.95); color: white; padding: 15px; border-radius: 8px; text-align: center; font-weight: 900; font-size: 1.2em; z-index: 2000; border: 4px solid white; display: none; box-shadow: 0 0 30px rgba(255, 0, 0, 0.8); text-transform: uppercase; animation: parpadeo-fuerte 0.8s infinite alternate; }
         @keyframes parpadeo-fuerte { from { opacity: 1; transform: scale(1); } to { opacity: 0.9; transform: scale(1.02); } }
         #reloj-sistema { font-family: monospace; color: #f1c40f; text-align: center; font-size: 1.2em; margin-bottom: 10px; border: 1px solid #555; padding: 5px; background: rgba(0,0,0,0.3); }
         .storm-alert, .proximity-alert { padding: 10px; margin-bottom: 10px; text-align: center; font-size: 0.8em; display: none; font-weight: bold; border-radius: 5px; }
@@ -74,58 +78,64 @@
         #tabla-dinamica th { background: #2c3e50; color: white; padding: 10px; text-align: left; position: sticky; top: 0; }
         #tabla-dinamica td { padding: 8px; border-bottom: 1px solid #ddd; }
         #tabla-dinamica tr:nth-child(even) { background-color: #f2f2f2; }
-        #btn-permiso { background: #16a085; font-size:0.7em; margin-bottom:10px; display:none; }
 
         /* =========================================================
            ESTILOS: APP CALCULADORA
            ========================================================= */
-        #calc-view { display: none; height: calc(100% - 50px); width: 100%; }
-        #calc-view.active { display: flex; }
-        #sidebar { width: 420px; background: #2c3e50; padding: 25px; display: flex; flex-direction: column; box-shadow: 4px 0 20px rgba(0,0,0,0.6); z-index: 100; overflow-y: auto; flex-shrink: 0; border-right: 1px solid #444; }
-        #sidebar h2 { margin-top: 0; color: #f39c12; font-size: 1.4em; border-bottom: 2px solid #555; padding-bottom: 15px; }
-        #sidebar h3 { margin: 20px 0 10px 0; font-size: 1.1em; color: #bdc3c7; text-transform: uppercase; font-weight: 600; }
-        .input-group { background: rgba(0,0,0,0.25); padding: 15px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #444; }
-        .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+        #calc-sidebar { 
+            position: absolute; top: 60px; left: 10px; width: 360px; background: rgba(44, 62, 80, 0.95); 
+            padding: 20px; box-shadow: 4px 0 20px rgba(0,0,0,0.6); z-index: 1000; overflow-y: auto; 
+            border-radius: 8px; max-height: 80vh; transition: transform 0.3s ease-in-out;
+            transform: translateX(0);
+        }
+        #calc-sidebar.escondido { transform: translateX(-360%); }
+        
+        #calc-sidebar h2 { margin-top: 0; color: #f39c12; font-size: 1.2em; border-bottom: 2px solid #555; padding-bottom: 10px; }
+        #calc-sidebar h3 { margin: 15px 0 8px 0; font-size: 0.9em; color: #bdc3c7; text-transform: uppercase; font-weight: 600; }
+        .input-group { background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px; margin-bottom: 10px; border: 1px solid #444; }
+        .input-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .input-row:last-child { margin-bottom: 0; }
-        .input-row label { font-size: 1em; color: #ddd; font-weight: 500; }
-        .input-row input { width: 140px; padding: 8px; font-size: 1em; background: #ecf0f1; border: 2px solid #95a5a6; border-radius: 6px; color: #2c3e50; font-weight: bold; text-align: right; }
+        .input-row label { font-size: 0.9em; color: #ddd; font-weight: 500; }
+        .input-row input { width: 120px; padding: 6px; font-size: 0.9em; background: #ecf0f1; border: 2px solid #95a5a6; border-radius: 6px; color: #2c3e50; font-weight: bold; text-align: right; }
         .input-row input:focus { border-color: #f39c12; outline: none; background: #fff; }
-        #fileInput { padding: 15px; background: #34495e; border-radius: 8px; border: 2px dashed #7f8c8d; width: 100%; box-sizing: border-box; cursor: pointer; color: white; }
-        .btn-action { width: 100%; padding: 15px; margin-top: 8px; border: none; cursor: pointer; font-weight: bold; font-size: 1em; border-radius: 6px; text-align: left; padding-left: 20px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        #fileInput { padding: 10px; background: #34495e; border-radius: 8px; border: 2px dashed #7f8c8d; width: 100%; box-sizing: border-box; cursor: pointer; color: white; font-size: 0.8em; }
+        .btn-action { width: 100%; padding: 12px; margin-top: 5px; border: none; cursor: pointer; font-weight: bold; font-size: 0.9em; border-radius: 6px; text-align: left; padding-left: 15px; transition: all 0.2s; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         .btn-action:hover { filter: brightness(1.1); }
         .btn-action:active { transform: translateY(2px); }
         .waiting { animation: parpadeo 1s infinite; border-left: 8px solid #f1c40f; background: #555; }
         .done { border-left: 8px solid #27ae60; background: #34495e; color: #aaa; }
         #btn-norte { background: #c0392b; color: white; }
         #btn-este { background: #2980b9; color: white; }
-        #btn-dibujar { background: #e67e22; color: white; margin-top: 25px; }
-        .btn-calc { margin-top: 20px; padding: 18px; background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; font-weight: 800; font-size: 1.2em; cursor: pointer; border-radius: 8px; width: 100%; }
-        #output-box { background: #fff; padding: 10px; margin-top: 20px; border-radius: 6px; display: none; border-left: 6px solid #f39c12; }
-        .res-table { width: 100%; border-collapse: collapse; font-size: 0.85em; color: #2c3e50; }
-        .res-table th { background: #e67e22; color: white; padding: 8px 5px; text-align: center; font-size: 0.9em;}
-        .res-table td { padding: 6px 4px; border-bottom: 1px solid #ddd; text-align: center; vertical-align: middle; }
-        .res-table input[type="text"] { width: 90px; text-align: center; font-weight: bold; border: 1px solid #ccc; border-radius: 3px; padding: 4px; }
-        .res-table input[type="number"] { width: 60px; text-align: center; font-weight: bold; border: 2px solid #3498db; border-radius: 3px; padding: 4px; color: #2980b9; }
-        #canvas-main { flex-grow: 1; position: relative; overflow: hidden; background: #444; cursor: crosshair; }
+        #btn-dibujar { background: #e67e22; color: white; margin-top: 15px; }
+        .btn-calc { margin-top: 15px; padding: 15px; background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none; font-weight: 800; font-size: 1.1em; cursor: pointer; border-radius: 8px; width: 100%; }
+        #output-box { background: #fff; padding: 10px; margin-top: 15px; border-radius: 6px; display: none; border-left: 6px solid #f39c12; }
+        .res-table { width: 100%; border-collapse: collapse; font-size: 0.8em; color: #2c3e50; }
+        .res-table th { background: #e67e22; color: white; padding: 6px 4px; text-align: center; }
+        .res-table td { padding: 4px 2px; border-bottom: 1px solid #ddd; text-align: center; vertical-align: middle; }
+        .res-table input[type="text"] { width: 80px; text-align: center; font-weight: bold; border: 1px solid #ccc; border-radius: 3px; padding: 3px; }
+        .res-table input[type="number"] { width: 50px; text-align: center; font-weight: bold; border: 2px solid #3498db; border-radius: 3px; padding: 3px; color: #2980b9; }
+        
+        #canvas-main { position: absolute; top:0; left:0; width: 100%; height: 100%; overflow: hidden; background: #222; cursor: crosshair; z-index: 1;}
         #canvas-wrapper { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
         #canvas-wrapper img { display: block; pointer-events: none; }
         #drawLayer { position: absolute; top: 0; left: 0; }
-        #hud { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 30px; font-size: 0.9em; pointer-events: none;}
+        #hud { position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.7); color: white; padding: 8px 15px; border-radius: 30px; font-size: 0.9em; pointer-events: none; z-index: 10;}
         @keyframes parpadeo { 0% { opacity: 1; } 50% { opacity: 0.8; } 100% { opacity: 1; } }
-        .badge { float: right; background: rgba(0,0,0,0.3); padding: 4px 10px; border-radius: 12px; font-size: 0.85em; }
-        .hint-text { font-size: 0.85em; color: #2ecc71; text-align: center; display: block; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px;}
+        .badge { float: right; background: rgba(0,0,0,0.3); padding: 3px 8px; border-radius: 12px; font-size: 0.85em; }
+        .hint-text { font-size: 0.8em; color: #2ecc71; text-align: center; display: block; margin-top: 10px; background: rgba(0,0,0,0.2); padding: 6px; border-radius: 4px;}
     </style>
 </head>
 <body>
 
-<div id="top-nav">
-    <button class="nav-btn active" onclick="switchView('mapa-view', this)">🌎 Mapa Operativo</button>
-    <button class="nav-btn" onclick="switchView('calc-view', this)">📐 Calculadora Coordenadas</button>
+<div id="app-switcher">
+    <button class="switch-btn active" title="Mapa Operativo" onclick="switchView('mapa-view', this)">🗺️</button>
+    <button class="switch-btn" title="Extraer Coordenadas" onclick="switchView('calc-view', this)">📐</button>
 </div>
 
 <div id="mapa-view" class="app-view active">
     <div id="radio-silence-alert">🚫 SILENCIO RADIAL ACTIVO 🚫</div>
-    <button id="menu-toggle" onclick="togglePanel()">☰</button>
+    
+    <button class="menu-toggle" onclick="document.getElementById('panel').classList.toggle('escondido')">☰</button>
 
     <div id="panel">
         <div id="reloj-sistema">--:--:--</div>
@@ -160,7 +170,7 @@
                 </select>
                 
                 <label style="font-size: 0.8em; color: #f1c40f; display: block; margin-bottom: 5px;">📝 Lugar / Referencia:</label>
-                <input type="text" id="input-lugar" placeholder="Ej. Truck Shop, Fase 3..." style="width: 100%; padding: 8px; margin-bottom: 15px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
+                <input type="text" id="input-lugar" placeholder="Ej. Fase 3..." style="width: 100%; padding: 8px; margin-bottom: 15px; background: #34495e; color: white; border: 1px solid #555; border-radius: 4px; box-sizing: border-box;">
                 
                 <button id="btn-registrar" class="map-btn" style="background:#27ae60; color:white; margin:0;" onclick="registrarGensetGPS()">🔋 GUARDAR UBICACIÓN AQUÍ</button>
             </div>
@@ -171,7 +181,7 @@
         <div class="footer-dev">Dev: <b>Johann Handel CP</b></div>
     </div>
 
-    <div id="modal-reporte" style="display:none; position:fixed; top:50px; left:0; width:100%; height:calc(100% - 50px); background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
+    <div id="modal-reporte" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:9999; align-items:center; justify-content:center;">
         <div style="background:white; width:95%; height:85%; max-width:800px; border-radius:10px; overflow:hidden; position:relative; display:flex; flex-direction:column; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
             <div style="background:#2c3e50; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center;">
                 <span id="modal-titulo" style="font-weight:bold;">📋 REPORTE</span>
@@ -187,7 +197,10 @@
 </div>
 
 <div id="calc-view" class="app-view">
-    <div id="sidebar">
+    
+    <button class="menu-toggle" onclick="document.getElementById('calc-sidebar').classList.toggle('escondido')">☰</button>
+
+    <div id="calc-sidebar">
         <h2>Coordenadas de Voladura</h2>
         <h3>1. Cargar Plano</h3>
         <input type="file" id="fileInput" accept="image/*,application/pdf">
@@ -205,7 +218,7 @@
         <h3>3. Voladuras</h3>
         <button id="btn-dibujar" class="btn-action" onclick="activarModo('dibujo')">3. Dibujar Zona <span class="badge" id="badge-dibujo">0 pts</span></button>
         
-        <span class="hint-text">💡 <b>ENTER:</b> Guardar Voladura<br>🖱️ <b>CLIC DERECHO:</b> Deshacer Punto</span>
+        <span class="hint-text">💡 <b>ENTER:</b> Guardar | 🖱️ <b>CLIC DER:</b> Deshacer</span>
 
         <button class="btn-calc" onclick="calcularTodo()">✅ CALCULAR DATOS</button>
 
@@ -228,16 +241,15 @@
 
 <script>
     // -----------------------------------------------------------------
-    // LÓGICA DE NAVEGACIÓN ENTRE PESTAÑAS (MAPA / CALCULADORA)
+    // LÓGICA DE DOCK INFERIOR (SWITCH)
     // -----------------------------------------------------------------
     function switchView(viewId, btnElement) {
         document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
-        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.switch-btn').forEach(b => b.classList.remove('active'));
         
         document.getElementById(viewId).classList.add('active');
         btnElement.classList.add('active');
         
-        // Si cambiamos al mapa, le forzamos un redibujo para evitar errores visuales
         if(viewId === 'mapa-view' && map) {
             setTimeout(() => { map.invalidateSize(); }, 100);
         }
@@ -253,7 +265,6 @@
     // REEMPLAZA CON LA URL DE TU APPS SCRIPT
     const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwXOY3ilI2bv6ffdiU90BFn8AAXN0xwEYojPG0-v9PD_dXi98JpY64qvcVtilu7hfIxhw/exec";
 
-    // --- DATA CABLES Y POSTES ---
     var datosEnergia = {
       "type": "FeatureCollection",
       "features": [
@@ -502,12 +513,9 @@
 
             for (let i = 1; i < filas.length; i++) {
                 const col = filas[i].split(',');
-                
                 if (col.length >= 3) {
                     const nombre = col[2] ? col[2].trim() : "";
-                    if (nombre !== "" && nombre !== "Nombre Genset" && nombre !== "Código") {
-                        nombresUnicos.add(nombre);
-                    }
+                    if (nombre !== "" && nombre !== "Nombre Genset" && nombre !== "Código") nombresUnicos.add(nombre);
                 }
 
                 if (col.length >= 4 && col[0].trim() !== "") {
@@ -533,9 +541,7 @@
 
             let selectGenset = document.getElementById("select-genset-maestro");
             let opcionesHTML = '<option value="">-- Selecciona un Genset --</option>';
-            Array.from(nombresUnicos).sort().forEach(nombreGen => {
-                opcionesHTML += `<option value="${nombreGen}">${nombreGen}</option>`;
-            });
+            Array.from(nombresUnicos).sort().forEach(nombreGen => { opcionesHTML += `<option value="${nombreGen}">${nombreGen}</option>`; });
             selectGenset.innerHTML = opcionesHTML;
 
         } catch (err) { console.error("Error Gensets", err); }
@@ -612,9 +618,7 @@
                     if (layer instanceof L.CircleMarker) {
                         layer.setStyle({ fillColor: "red", color: "white", radius: 6, weight: 2, opacity: 1, fillOpacity: 1 });
                         layer.bindPopup("🚨 <b>¡AFECTADO!</b><br>" + (layer.feature.properties.name || "Sin nombre"));
-                    } else {
-                        layer.setStyle({ color: "red", weight: 5, dashArray: null, opacity: 1 });
-                    }
+                    } else { layer.setStyle({ color: "red", weight: 5, dashArray: null, opacity: 1 }); }
                 }
             });
         });
@@ -624,9 +628,7 @@
             btnAlert.style.display = 'block';
             btnAlert.innerText = `🚨 VER ${postesAfectados.length} POSTES AFECTADOS`;
             enviarNotificacion("ALERTA", `Se detectaron ${postesAfectados.length} interferencias.`);
-        } else {
-            btnAlert.style.display = 'none';
-        }
+        } else { btnAlert.style.display = 'none'; }
     }
 
     function mostrarTablaInterferencias() { mostrarReporteGenerico("⚠️ POSTES AFECTADOS", postesAfectados); }
@@ -647,8 +649,7 @@
     if (Notification.permission !== "granted" && "Notification" in window) document.getElementById('btn-permiso').style.display = 'block';
 
     var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
-    var marcadorVehiculo = null;
-    var miPosicion = null;
+    var marcadorVehiculo = null; var miPosicion = null;
 
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
@@ -662,9 +663,7 @@
                 document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
             } catch(e) {}
             btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
-            
             document.getElementById("controles-registro-genset").style.display = "block";
-            
             if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
             else { marcadorVehiculo.setLatLng([lat, lon]); }
             chequearTormentas(); chequearProximidadVoladura();
@@ -697,8 +696,7 @@
 
     function chequearTormentas() {
         if (!miPosicion) return;
-        var box = document.getElementById("storm-box");
-        var detectados = [];
+        var box = document.getElementById("storm-box"); var detectados = [];
         sensores.forEach(s => { if (map.distance(miPosicion, [s.lat, s.lon]) < 5200) detectados.push(s.nombre); });
         if (detectados.length > 0) { box.style.display = "block"; box.innerHTML = `⚡ EN SENSOR: <br>${detectados.join(" y ")}`; }
         else { box.style.display = "none"; }
@@ -706,55 +704,35 @@
 
     function registrarGensetGPS() {
         if (!miPosicion) { alert("❌ Primero activa el GPS y espera a tener señal."); return; }
-        let selectGenset = document.getElementById("select-genset-maestro");
-        let inputLugar = document.getElementById("input-lugar");
-        let nombreGenset = selectGenset.value;
-        let lugarGenset = inputLugar.value;
+        let selectGenset = document.getElementById("select-genset-maestro"); let inputLugar = document.getElementById("input-lugar");
+        let nombreGenset = selectGenset.value; let lugarGenset = inputLugar.value;
 
         if (!nombreGenset || nombreGenset.trim() === "") { alert("⚠️ Por favor selecciona un Genset de la lista."); return; }
         if (!lugarGenset || lugarGenset.trim() === "") { alert("⚠️ Por favor escribe el Lugar o Referencia."); return; }
 
-        let utm;
-        try { utm = proj4("EPSG:4326", "EPSG:32718", [miPosicion.lng, miPosicion.lat]); } 
-        catch(e) { alert("Error al calcular coordenadas UTM."); return; }
-        
-        let este = utm[0].toFixed(0);
-        let norte = utm[1].toFixed(0);
-        let btnReg = document.getElementById("btn-registrar");
-        btnReg.innerText = "⏳ ENVIANDO...";
+        let utm; try { utm = proj4("EPSG:4326", "EPSG:32718", [miPosicion.lng, miPosicion.lat]); } catch(e) { alert("Error al calcular coordenadas UTM."); return; }
+        let este = utm[0].toFixed(0); let norte = utm[1].toFixed(0);
+
+        let btnReg = document.getElementById("btn-registrar"); btnReg.innerText = "⏳ ENVIANDO...";
 
         let iframe = document.getElementById("hidden_iframe");
-        if (!iframe) {
-            iframe = document.createElement("iframe");
-            iframe.name = "hidden_iframe"; iframe.id = "hidden_iframe";
-            iframe.style.display = "none"; document.body.appendChild(iframe);
-        }
+        if (!iframe) { iframe = document.createElement("iframe"); iframe.name = "hidden_iframe"; iframe.id = "hidden_iframe"; iframe.style.display = "none"; document.body.appendChild(iframe); }
 
         let form = document.createElement("form");
-        form.action = URL_APPS_SCRIPT;
-        form.method = "GET"; 
-        form.target = "hidden_iframe"; 
-        form.style.display = "none";
-
+        form.action = URL_APPS_SCRIPT; form.method = "GET"; form.target = "hidden_iframe"; form.style.display = "none";
+        
         let pNorte = document.createElement("input"); pNorte.name = "norte"; pNorte.value = norte; form.appendChild(pNorte);
         let pEste = document.createElement("input"); pEste.name = "este"; pEste.value = este; form.appendChild(pEste);
         let pNombre = document.createElement("input"); pNombre.name = "nombre"; pNombre.value = nombreGenset; form.appendChild(pNombre);
         let pLugar = document.createElement("input"); pLugar.name = "lugar"; pLugar.value = lugarGenset; form.appendChild(pLugar);
 
         document.body.appendChild(form);
-
         iframe.onload = function() {
             alert(`✅ Ubicación de ${nombreGenset} en ${lugarGenset} registrada.`);
-            btnReg.innerText = "🔋 GUARDAR UBICACIÓN AQUÍ";
-            selectGenset.value = ""; 
-            inputLugar.value = ""; 
-            form.remove(); 
-            setTimeout(cargarGensets, 2000);
+            btnReg.innerText = "🔋 GUARDAR UBICACIÓN AQUÍ"; selectGenset.value = ""; inputLugar.value = ""; form.remove(); setTimeout(cargarGensets, 2000);
         };
         form.submit();
     }
-
-    // Inicializar mapa al cargar
     window.addEventListener('load', actualizarTodo);
 
     // =================================================================
@@ -762,12 +740,8 @@
     // =================================================================
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    let calcModo = null; 
-    let clicsNorte = []; let clicsEste = []; 
-    let poligonoActual = []; 
-    let poligonosGuardados = []; 
-    let resultadosGlobales = [];
-
+    let calcModo = null; let clicsNorte = []; let clicsEste = []; 
+    let poligonoActual = []; let poligonosGuardados = []; let resultadosGlobales = [];
     let transform = { x: 0, y: 0, scale: 1 };
     let isPanning = false, startPanX = 0, startPanY = 0;
 
@@ -798,10 +772,7 @@
             fileReader.readAsArrayBuffer(file);
         } else {
             let reader = new FileReader();
-            reader.onload = function(event){ 
-                imgCalc.src = event.target.result; 
-                imgCalc.onload = () => configurarEntorno(imgCalc.width, imgCalc.height); 
-            }
+            reader.onload = function(event){ imgCalc.src = event.target.result; imgCalc.onload = () => configurarEntorno(imgCalc.width, imgCalc.height); }
             reader.readAsDataURL(file);
         }
     });
@@ -817,12 +788,13 @@
     }
 
     mainContainerCalc.addEventListener('wheel', function(e) {
+        if (!document.getElementById('calc-view').classList.contains('active')) return;
         e.preventDefault();
         const delta = -Math.sign(e.deltaY);
         let newScale = transform.scale + (delta * 0.15 * transform.scale);
         if (newScale < 0.05) newScale = 0.05;
-        let mouseX = e.clientX - mainContainerCalc.getBoundingClientRect().left - 420; // -420 por el sidebar
-        let mouseY = e.clientY - mainContainerCalc.getBoundingClientRect().top - 50;  // -50 por el nav top
+        // Al estar a pantalla completa, calculamos directo sobre el cliente
+        let mouseX = e.clientX; let mouseY = e.clientY;  
         transform.x = mouseX - ((mouseX - transform.x) / transform.scale * newScale);
         transform.y = mouseY - ((mouseY - transform.y) / transform.scale * newScale);
         transform.scale = newScale;
@@ -847,9 +819,7 @@
     window.addEventListener('keydown', (e) => { 
         if(document.getElementById('calc-view').classList.contains('active')) {
             if(e.code === 'Space') mainContainerCalc.style.cursor = 'grab'; 
-            if(e.code === 'Enter') {
-                if (calcModo === 'dibujo' && poligonoActual.length > 2) guardarPoligono();
-            }
+            if(e.code === 'Enter' && calcModo === 'dibujo' && poligonoActual.length > 2) guardarPoligono();
         }
     });
     window.addEventListener('keyup', (e) => { if(e.code === 'Space') mainContainerCalc.style.cursor = 'crosshair'; });
@@ -861,7 +831,6 @@
 
     wrapperCalc.addEventListener('mousedown', function(e){
         if (e.button !== 0 || e.getModifierState("Space") || !calcModo) return; 
-        
         let rect = imgCalc.getBoundingClientRect();
         let x = (e.clientX - rect.left) * (imgCalc.width / rect.width);
         let y = (e.clientY - rect.top) * (imgCalc.height / rect.height);
@@ -874,81 +843,50 @@
 
     wrapperCalc.addEventListener('contextmenu', function(e){
         e.preventDefault(); 
-        if (calcModo === 'dibujo' && poligonoActual.length > 0) {
-            poligonoActual.pop(); 
-            actualizarUICalc(); 
-            renderCalc();
-        }
+        if (calcModo === 'dibujo' && poligonoActual.length > 0) { poligonoActual.pop(); actualizarUICalc(); renderCalc(); }
     });
 
     function activarModo(n) {
         calcModo = n;
         if(calcModo === 'norte') clicsNorte = [];
         if(calcModo === 'este') clicsEste = [];
-        if(calcModo === 'dibujo') {
-            if(poligonoActual.length > 2) guardarPoligono(); 
-            poligonoActual = []; 
-        }
+        if(calcModo === 'dibujo') { if(poligonoActual.length > 2) guardarPoligono(); poligonoActual = []; }
         actualizarUICalc(); renderCalc();
     }
 
     function guardarPoligono() {
-        if(poligonoActual.length > 2) {
-            poligonosGuardados.push([...poligonoActual]); 
-            poligonoActual = []; 
-            actualizarUICalc(); renderCalc();
-        } else {
-            alert("Dibuja al menos 3 puntos antes de guardar.");
-        }
+        if(poligonoActual.length > 2) { poligonosGuardados.push([...poligonoActual]); poligonoActual = []; actualizarUICalc(); renderCalc(); } 
+        else { alert("Dibuja al menos 3 puntos antes de guardar."); }
     }
 
     function actualizarUICalc() {
         document.querySelectorAll('#calc-view .btn-action').forEach(b => b.classList.remove('waiting', 'done'));
         
-        let btnN = document.getElementById('btn-norte');
-        document.getElementById('badge-norte').innerText = clicsNorte.length + "/2";
+        let btnN = document.getElementById('btn-norte'); document.getElementById('badge-norte').innerText = clicsNorte.length + "/2";
         if(calcModo === 'norte') btnN.classList.add('waiting'); else if(clicsNorte.length === 2) btnN.classList.add('done');
 
-        let btnE = document.getElementById('btn-este');
-        document.getElementById('badge-este').innerText = clicsEste.length + "/2";
+        let btnE = document.getElementById('btn-este'); document.getElementById('badge-este').innerText = clicsEste.length + "/2";
         if(calcModo === 'este') btnE.classList.add('waiting'); else if(clicsEste.length === 2) btnE.classList.add('done');
 
-        let btnD = document.getElementById('btn-dibujar');
-        document.getElementById('badge-dibujo').innerText = poligonoActual.length + " pts";
-        if(calcModo === 'dibujo') {
-            btnD.classList.add('waiting');
-        } else {
-            if(poligonosGuardados.length > 0 || poligonoActual.length > 2) btnD.classList.add('done');
-        }
+        let btnD = document.getElementById('btn-dibujar'); document.getElementById('badge-dibujo').innerText = poligonoActual.length + " pts";
+        if(calcModo === 'dibujo') { btnD.classList.add('waiting'); } else { if(poligonosGuardados.length > 0 || poligonoActual.length > 2) btnD.classList.add('done'); }
     }
 
     function renderCalc() {
         ctxCalc.clearRect(0,0, canvasCalc.width, canvasCalc.height);
-        
         ctxCalc.strokeStyle = '#e74c3c'; ctxCalc.lineWidth = 4;
         clicsNorte.forEach(y => { ctxCalc.beginPath(); ctxCalc.moveTo(0, y); ctxCalc.lineTo(canvasCalc.width, y); ctxCalc.stroke(); });
         ctxCalc.strokeStyle = '#3498db'; ctxCalc.lineWidth = 4;
         clicsEste.forEach(x => { ctxCalc.beginPath(); ctxCalc.moveTo(x, 0); ctxCalc.lineTo(x, canvasCalc.height); ctxCalc.stroke(); });
         
-        poligonosGuardados.forEach((poli, i) => { 
-            let nombreActual = resultadosGlobales[i] ? resultadosGlobales[i].nombre : `Voladura ${i+1}`;
-            dibujarPoligono(poli, '#8e44ad', nombreActual); 
-        });
-
+        poligonosGuardados.forEach((poli, i) => { let nombreActual = resultadosGlobales[i] ? resultadosGlobales[i].nombre : `Voladura ${i+1}`; dibujarPoligono(poli, '#8e44ad', nombreActual); });
         if(poligonoActual.length > 0) {
             dibujarPoligono(poligonoActual, '#e67e22', null);
-            poligonoActual.forEach(p => { 
-                ctxCalc.beginPath(); ctxCalc.arc(p.x, p.y, 2, 0, Math.PI*2); 
-                ctxCalc.fillStyle = 'white'; ctxCalc.fill(); 
-                ctxCalc.lineWidth = 1; ctxCalc.strokeStyle = '#000'; ctxCalc.stroke();
-            });
+            poligonoActual.forEach(p => { ctxCalc.beginPath(); ctxCalc.arc(p.x, p.y, 2, 0, Math.PI*2); ctxCalc.fillStyle = 'white'; ctxCalc.fill(); ctxCalc.lineWidth = 1; ctxCalc.strokeStyle = '#000'; ctxCalc.stroke(); });
         }
-
         resultadosGlobales.forEach((res) => {
-            ctxCalc.beginPath(); 
-            ctxCalc.arc(res.cx, res.cy, res.radio / res.escala, 0, Math.PI*2);
-            ctxCalc.strokeStyle = '#ff00ff'; ctxCalc.lineWidth = 4; ctxCalc.setLineDash([20,10]); ctxCalc.stroke();
-            ctxCalc.setLineDash([]); 
+            ctxCalc.beginPath(); ctxCalc.arc(res.cx, res.cy, res.radio / res.escala, 0, Math.PI*2);
+            ctxCalc.strokeStyle = '#ff00ff'; ctxCalc.lineWidth = 4; ctxCalc.setLineDash([20,10]); ctxCalc.stroke(); ctxCalc.setLineDash([]); 
         });
     }
 
@@ -956,131 +894,59 @@
         if(puntos.length === 0) return;
         ctxCalc.beginPath(); ctxCalc.moveTo(puntos[0].x, puntos[0].y);
         for(let i=1; i<puntos.length; i++) ctxCalc.lineTo(puntos[i].x, puntos[i].y);
-        if(puntos.length>2) { 
-            ctxCalc.closePath(); 
-            ctxCalc.fillStyle = color === '#e67e22' ? 'rgba(230, 126, 34, 0.4)' : 'rgba(142, 68, 173, 0.4)'; 
-            ctxCalc.fill(); 
-        }
+        if(puntos.length>2) { ctxCalc.closePath(); ctxCalc.fillStyle = color === '#e67e22' ? 'rgba(230, 126, 34, 0.4)' : 'rgba(142, 68, 173, 0.4)'; ctxCalc.fill(); }
         ctxCalc.strokeStyle = color; ctxCalc.lineWidth = 2; ctxCalc.stroke();
 
         if(textoCentro && puntos.length > 2) {
-            let sumX = 0, sumY = 0;
-            puntos.forEach(p => { sumX += p.x; sumY += p.y; });
-            let centroX = sumX / puntos.length;
-            let centroY = sumY / puntos.length;
-
-            ctxCalc.fillStyle = 'white'; 
-            ctxCalc.font = "bold 26px Arial";
-            ctxCalc.textAlign = "center";
-            ctxCalc.textBaseline = "middle";
-            ctxCalc.shadowColor = "black";
-            ctxCalc.shadowBlur = 6;
-            ctxCalc.fillText(textoCentro, centroX, centroY);
-            ctxCalc.shadowBlur = 0;
-            ctxCalc.textAlign = "left";
-            ctxCalc.textBaseline = "alphabetic";
+            let sumX = 0, sumY = 0; puntos.forEach(p => { sumX += p.x; sumY += p.y; });
+            let centroX = sumX / puntos.length; let centroY = sumY / puntos.length;
+            ctxCalc.fillStyle = 'white'; ctxCalc.font = "bold 26px Arial"; ctxCalc.textAlign = "center"; ctxCalc.textBaseline = "middle";
+            ctxCalc.shadowColor = "black"; ctxCalc.shadowBlur = 6; ctxCalc.fillText(textoCentro, centroX, centroY);
+            ctxCalc.shadowBlur = 0; ctxCalc.textAlign = "left"; ctxCalc.textBaseline = "alphabetic";
         }
     }
 
     function calcularTodo() {
         if(poligonoActual.length > 2) { guardarPoligono(); }
-        if(clicsNorte.length < 2 || clicsEste.length < 2 || poligonosGuardados.length === 0) {
-            return alert("Faltan datos de calibración o no has dibujado ninguna voladura.");
-        }
+        if(clicsNorte.length < 2 || clicsEste.length < 2 || poligonosGuardados.length === 0) { return alert("Faltan datos de calibración o no has dibujado ninguna voladura."); }
 
-        let norteBase = parseFloat(document.getElementById('valNorte').value);
-        let esteBase = parseFloat(document.getElementById('valEste').value);
+        let norteBase = parseFloat(document.getElementById('valNorte').value); let esteBase = parseFloat(document.getElementById('valEste').value);
         let distanciaReal = parseFloat(document.getElementById('valDist').value);
-
-        let m_px_Y = distanciaReal / Math.abs(clicsNorte[1] - clicsNorte[0]);
-        let m_px_X = distanciaReal / Math.abs(clicsEste[1] - clicsEste[0]);
+        let m_px_Y = distanciaReal / Math.abs(clicsNorte[1] - clicsNorte[0]); let m_px_X = distanciaReal / Math.abs(clicsEste[1] - clicsEste[0]);
         let m_px_Promedio = (m_px_Y + m_px_X) / 2;
 
         resultadosGlobales = [];
-
         poligonosGuardados.forEach((poli, index) => {
-            let sumX=0, sumY=0;
-            poli.forEach(p => { sumX+=p.x; sumY+=p.y; });
-            let cx_px = sumX / poli.length;
-            let cy_px = sumY / poli.length;
-
-            let norteFinal = norteBase - ((cy_px - clicsNorte[0]) * m_px_Y); 
-            let esteFinal = esteBase + ((cx_px - clicsEste[0]) * m_px_X);   
+            let sumX=0, sumY=0; poli.forEach(p => { sumX+=p.x; sumY+=p.y; });
+            let cx_px = sumX / poli.length; let cy_px = sumY / poli.length;
+            let norteFinal = norteBase - ((cy_px - clicsNorte[0]) * m_px_Y); let esteFinal = esteBase + ((cx_px - clicsEste[0]) * m_px_X);   
 
             let maxRadio_px = 0;
-            poli.forEach(p => {
-                let d = Math.hypot(p.x - cx_px, p.y - cy_px);
-                if(d > maxRadio_px) maxRadio_px = d;
-            });
+            poli.forEach(p => { let d = Math.hypot(p.x - cx_px, p.y - cy_px); if(d > maxRadio_px) maxRadio_px = d; });
             let radioCalculado = Math.ceil((maxRadio_px * m_px_Promedio) + 500);
 
-            resultadosGlobales.push({
-                nombre: `Voladura ${index + 1}`,
-                norte: norteFinal.toFixed(0),
-                este: esteFinal.toFixed(0),
-                radio: radioCalculado,
-                cx: cx_px,
-                cy: cy_px,
-                escala: m_px_Promedio
-            });
+            resultadosGlobales.push({ nombre: `Voladura ${index + 1}`, norte: norteFinal.toFixed(0), este: esteFinal.toFixed(0), radio: radioCalculado, cx: cx_px, cy: cy_px, escala: m_px_Promedio });
         });
-
-        dibujarTabla();
-        renderCalc();
+        dibujarTabla(); renderCalc();
     }
 
     function dibujarTabla() {
-        let box = document.getElementById('output-box');
-        box.style.display = 'block';
-        
-        let html = `
-        <table class="res-table">
-            <tr>
-                <th>Nombre</th>
-                <th>Norte</th>
-                <th>Este</th>
-                <th>Radio (m)</th>
-            </tr>`;
-
+        let box = document.getElementById('output-box'); box.style.display = 'block';
+        let html = `<table class="res-table"><tr><th>Nombre</th><th>Norte</th><th>Este</th><th>Radio (m)</th></tr>`;
         resultadosGlobales.forEach((res, index) => {
-            html += `
-            <tr>
-                <td><input type="text" value="${res.nombre}" onchange="cambiarNombre(${index}, this.value)"></td>
-                <td>${res.norte}</td>
-                <td>${res.este}</td>
-                <td><input type="number" value="${res.radio}" oninput="cambiarRadio(${index}, this.value)"></td>
-            </tr>`;
+            html += `<tr><td><input type="text" value="${res.nombre}" onchange="cambiarNombre(${index}, this.value)"></td><td>${res.norte}</td><td>${res.este}</td><td><input type="number" value="${res.radio}" oninput="cambiarRadio(${index}, this.value)"></td></tr>`;
         });
-        
-        html += `</table>`;
-        box.innerHTML = html;
+        html += `</table>`; box.innerHTML = html;
     }
 
-    function cambiarRadio(index, nuevoValor) {
-        let val = parseFloat(nuevoValor);
-        if(!isNaN(val)) {
-            resultadosGlobales[index].radio = val;
-            renderCalc(); 
-        }
-    }
-
-    function cambiarNombre(index, nuevoTexto) {
-        resultadosGlobales[index].nombre = nuevoTexto;
-        renderCalc(); 
-    }
+    function cambiarRadio(index, nuevoValor) { let val = parseFloat(nuevoValor); if(!isNaN(val)) { resultadosGlobales[index].radio = val; renderCalc(); } }
+    function cambiarNombre(index, nuevoTexto) { resultadosGlobales[index].nombre = nuevoTexto; renderCalc(); }
 
     function reiniciarCalculadora() {
-        calcModo = null;
-        clicsNorte = []; clicsEste = [];
-        poligonoActual = []; poligonosGuardados = []; resultadosGlobales = [];
-        imgCalc.src = "";
-        document.getElementById('fileInput').value = "";
-        document.getElementById('output-box').style.display = "none";
-        document.getElementById('valNorte').value = "";
-        document.getElementById('valEste').value = "";
-        document.getElementById('valDist').value = "";
-        actualizarUICalc();
-        renderCalc();
+        calcModo = null; clicsNorte = []; clicsEste = []; poligonoActual = []; poligonosGuardados = []; resultadosGlobales = [];
+        imgCalc.src = ""; document.getElementById('fileInput').value = ""; document.getElementById('output-box').style.display = "none";
+        document.getElementById('valNorte').value = ""; document.getElementById('valEste').value = ""; document.getElementById('valDist').value = "";
+        actualizarUICalc(); renderCalc();
     }
 </script>
 
