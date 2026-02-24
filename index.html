@@ -663,58 +663,31 @@
     }
     if (Notification.permission !== "granted" && "Notification" in window) document.getElementById('btn-permiso').style.display = 'block';
 
-    var truckIcon = L.divIcon({ className: 'car-container', html: `<svg class="car-icon" viewBox="0 0 24 24" fill="#00FF00" xmlns="http://www.w3.org/2000/svg"><path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5H6.5C5.84 5 5.28 5.42 5.08 6.01L3 12V20C3 20.55 3.45 21 4 21H5C5.55 21 6 20.55 6 20V19H18V20C18 20.55 18.45 21 19 21H20C20.55 21 21 20.55 21 20V12L18.92 6.01ZM6.5 16C5.67 16 5 15.33 5 14.5C5 13.67 5.67 13 6.5 13C7.33 13 8 13.67 8 14.5C8 15.33 7.33 16 6.5 16ZM17.5 16C16.67 16 16 15.33 16 14.5C16 13.67 16.67 13 17.5 13C18.33 13 19 13.67 19 14.5C19 15.33 18.33 16 17.5 16ZM5 11L6.5 6.5H17.5L19 11H5Z"/></svg>`, iconSize: [30, 30], iconAnchor: [15, 15] });
+    var truckIcon = L.divIcon({ 
+    className: 'car-container', 
+    html: '<div style="font-size: 30px; text-shadow: 0px 0px 5px black; text-align:center;">🚙</div>', 
+    iconSize: [30, 30], 
+    iconAnchor: [15, 15] 
+});
     var marcadorVehiculo = null; var miPosicion = null;
 
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
         if (!navigator.geolocation) { alert("Sin GPS"); return; }
-        
-        btn.innerHTML = "🔄 BUSCANDO..."; 
-        btn.style.backgroundColor = "#e67e22";
-        
+        btn.innerHTML = "🔄 BUSCANDO..."; btn.style.backgroundColor = "#e67e22";
         navigator.geolocation.watchPosition((pos) => {
-            var lat = pos.coords.latitude; 
-            var lon = pos.coords.longitude;
+            var lat = pos.coords.latitude; var lon = pos.coords.longitude;
             miPosicion = L.latLng(lat, lon);
-            
             try {
                 var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
                 document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
             } catch(e) {}
-            
-            btn.innerHTML = "✅ GPS ACTIVO"; 
-            btn.style.backgroundColor = "#27ae60";
-            
-            // Mostrar los controles para guardar el Genset
+            btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
             document.getElementById("controles-registro-genset").style.display = "block";
-            
-            // 👉 MAGIA PARA CELULARES: Oculta el panel gris automáticamente para dejarte ver el mapa
-            if (window.innerWidth < 800) {
-                document.getElementById('panel').classList.add('escondido');
-            }
-            
-            // Dibujar el carrito verde y mover la cámara hacia él
-            if (!marcadorVehiculo) { 
-                marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); 
-                map.flyTo([lat, lon], 16); 
-            } else { 
-                marcadorVehiculo.setLatLng([lat, lon]); 
-            }
-            
-            chequearTormentas(); 
-            chequearProximidadVoladura();
-            
-        }, (err) => { 
-            btn.innerHTML = "⚠️ SIN SEÑAL"; 
-            btn.style.backgroundColor = "#c0392b"; 
-            // Si quieres ver el error exacto en tu celular, descomenta la siguiente línea quitando las dos barras:
-            // alert("Error GPS: " + err.message);
-        }, { 
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 0
-        });
+            if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
+            else { marcadorVehiculo.setLatLng([lat, lon]); }
+            chequearTormentas(); chequearProximidadVoladura();
+        }, (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, { enableHighAccuracy: true });
     }
 
     function chequearProximidadVoladura() {
