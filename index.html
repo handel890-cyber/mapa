@@ -674,20 +674,41 @@
     function iniciarSeguimiento() {
         var btn = document.getElementById("btnGps");
         if (!navigator.geolocation) { alert("Sin GPS"); return; }
-        btn.innerHTML = "🔄 BUSCANDO..."; btn.style.backgroundColor = "#e67e22";
+        
+        btn.innerHTML = "🔄 BUSCANDO..."; 
+        btn.style.backgroundColor = "#e67e22";
+        
         navigator.geolocation.watchPosition((pos) => {
-            var lat = pos.coords.latitude; var lon = pos.coords.longitude;
+            var lat = pos.coords.latitude; 
+            var lon = pos.coords.longitude;
             miPosicion = L.latLng(lat, lon);
+            
             try {
                 var utm = proj4("EPSG:4326", "EPSG:32718", [lon, lat]);
                 document.getElementById("utm-display").innerHTML = `N: ${utm[1].toFixed(0)} | E: ${utm[0].toFixed(0)}`;
             } catch(e) {}
-            btn.innerHTML = "✅ GPS ACTIVO"; btn.style.backgroundColor = "#27ae60";
+            
+            btn.innerHTML = "✅ GPS ACTIVO"; 
+            btn.style.backgroundColor = "#27ae60";
+            
             document.getElementById("controles-registro-genset").style.display = "block";
-            if (!marcadorVehiculo) { marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); map.flyTo([lat, lon], 16); }
-            else { marcadorVehiculo.setLatLng([lat, lon]); }
-            chequearTormentas(); chequearProximidadVoladura();
-        }, (err) => { btn.innerHTML = "⚠️ SIN SEÑAL"; btn.style.backgroundColor = "#c0392b"; }, { enableHighAccuracy: true });
+            
+            // Aquí está el cambio clave: usamos setView en lugar de flyTo
+            if (!marcadorVehiculo) { 
+                marcadorVehiculo = L.marker([lat, lon], {icon: truckIcon}).addTo(capaGPS); 
+                map.setView([lat, lon], 16); 
+            } else { 
+                marcadorVehiculo.setLatLng([lat, lon]); 
+                map.setView([lat, lon], 16); // Para que la cámara te siga moviendo si caminas
+            }
+            
+            chequearTormentas(); 
+            chequearProximidadVoladura();
+            
+        }, (err) => { 
+            btn.innerHTML = "⚠️ SIN SEÑAL"; 
+            btn.style.backgroundColor = "#c0392b"; 
+        }, { enableHighAccuracy: true });
     }
 
     function chequearProximidadVoladura() {
